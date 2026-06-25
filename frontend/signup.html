@@ -20,6 +20,15 @@
 
   <div class="auth-wrapper">
     <div class="auth-card glass-card">
+      <div style="background: rgba(79, 142, 247, 0.1); border: 1px solid rgba(79, 142, 247, 0.25); color: #4F8EF7; padding: 0.75rem 1rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem; font-size: 0.85rem; font-weight: 500; text-align: left;">
+        🎁 <strong>Beta Member Benefits:</strong>
+        <ul style="margin-left: 1.25rem; margin-top: 0.25rem; font-size: 0.8rem; line-height: 1.4;">
+          <li>Unlimited audio uploads & analysis</li>
+          <li>All export options unlocked (PDF/DOCX)</li>
+          <li>Free access lifetime priority tier</li>
+        </ul>
+      </div>
+
       <h2>Create Account</h2>
       <p class="subtitle">Enter details to sign up for MeetMind summarizer</p>
 
@@ -34,9 +43,17 @@
 
         <div class="form-group">
           <label for="password">Password (min. 8 characters)</label>
-          <input type="password" id="password" autocomplete="off" class="form-control" placeholder="••••••••" minlength="8" required>
-          <span style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem; display: block;">
-            Must contain at least 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character.
+          <input type="password" id="password" autocomplete="off" class="form-control" placeholder="••••••••" required>
+          
+          <div id="strength-container" style="margin-top: 0.5rem; display: none;">
+            <div style="display: flex; gap: 4px; height: 4px; background: rgba(255,255,255,0.05); border-radius: 2px; overflow: hidden;">
+              <div id="strength-bar" style="width: 0%; height: 100%; transition: width 0.3s ease, background-color 0.3s ease;"></div>
+            </div>
+            <span id="strength-text" style="font-size: 0.75rem; display: block; margin-top: 0.25rem;"></span>
+          </div>
+
+          <span style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.5rem; display: block;">
+            Must contain at least 1 uppercase, 1 lowercase, 1 number, and 1 special char.
           </span>
         </div>
 
@@ -44,6 +61,21 @@
           Sign Up
         </button>
       </form>
+
+      <div style="margin-top: 1.5rem; border-top: 1px solid var(--border-subtle); padding-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.8rem; color: var(--text-secondary);">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          No credit card required
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Instant account setup — start processing in 30 seconds
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Secure SSL encryption & GDPL data compliance
+        </div>
+      </div>
 
       <p style="text-align: center; margin-top: 1.5rem; color: var(--text-secondary); font-size: 0.9rem;">
         Already have an account? <a href="login.html">Login</a>
@@ -53,6 +85,13 @@
 
   <script src="js/auth.js"></script>
   <script>
+    // Read ref parameter from URL on page load and store in sessionStorage
+    const urlParams = new URLSearchParams(window.location.search);
+    const refCode = urlParams.get('ref');
+    if (refCode) {
+      sessionStorage.setItem('referral_code', refCode);
+    }
+
     // Redirect already authenticated users to dashboard
     async function redirectIfAuth() {
       try {
@@ -64,19 +103,85 @@
     }
     redirectIfAuth();
 
+    // Password strength listener
+    const passwordInput = document.getElementById('password');
+    const strengthContainer = document.getElementById('strength-container');
+    const strengthBar = document.getElementById('strength-bar');
+    const strengthText = document.getElementById('strength-text');
+
+    passwordInput.addEventListener('input', () => {
+      const val = passwordInput.value;
+      if (!val) {
+        strengthContainer.style.display = 'none';
+        return;
+      }
+      
+      strengthContainer.style.display = 'block';
+      let score = 0;
+      if (val.length >= 8) score++;
+      if (/[A-Z]/.test(val)) score++;
+      if (/[a-z]/.test(val)) score++;
+      if (/\d/.test(val)) score++;
+      if (/[!@#$%^&*(),.?":{}|<>]/.test(val)) score++;
+
+      let width = (score / 5) * 100;
+      strengthBar.style.width = width + '%';
+
+      if (score <= 2) {
+        strengthBar.style.backgroundColor = '#EF4444';
+        strengthText.textContent = 'Weak';
+        strengthText.style.color = '#EF4444';
+      } else if (score <= 4) {
+        strengthBar.style.backgroundColor = '#F59E0B';
+        strengthText.textContent = 'Medium';
+        strengthText.style.color = '#F59E0B';
+      } else {
+        strengthBar.style.backgroundColor = '#10B981';
+        strengthText.textContent = 'Strong';
+        strengthText.style.color = '#10B981';
+      }
+    });
+
+    // Form submission
     document.getElementById('signup-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       
       const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
+      const password = passwordInput.value;
       const submitBtn = document.getElementById('submit-btn');
       const errorAlert = document.getElementById('error-alert');
       const successAlert = document.getElementById('success-alert');
       
       errorAlert.style.display = 'none';
       successAlert.style.display = 'none';
+
+      // Inline validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        errorAlert.textContent = 'Please enter a valid email address.';
+        errorAlert.style.display = 'block';
+        return;
+      }
+      
+      if (password.length < 8) {
+        errorAlert.textContent = 'Password must be at least 8 characters long.';
+        errorAlert.style.display = 'block';
+        return;
+      }
+      if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password) || !/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+        errorAlert.textContent = 'Password must satisfy all requirements (uppercase, lowercase, number, special char).';
+        errorAlert.style.display = 'block';
+        return;
+      }
+      
       submitBtn.disabled = true;
       submitBtn.textContent = 'Creating Account...';
+
+      const referralCode = sessionStorage.getItem('referral_code') || null;
+      const payload = { email, password };
+      if (referralCode) {
+        payload.referral_code = referralCode;
+      }
       
       try {
         const response = await fetch(`${API_BASE_URL}/api/v1/auth/signup`, {
@@ -84,7 +189,7 @@
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ email, password })
+          body: JSON.stringify(payload)
         });
         
         const data = await response.json();

@@ -21,7 +21,9 @@ MOCK_PROFILES = {
         "is_pro": False,
         "pro_until": None,
         "meetings_used": 1,
-        "razorpay_subscription_id": None
+        "razorpay_subscription_id": None,
+        "referred_by": None,
+        "referral_code": "demo1234"
     }
 }
 
@@ -136,10 +138,21 @@ async def signup(request: Request, credentials: UserCredentials):
     """Sign up a new user via Supabase Auth."""
     settings = get_settings()
     if settings.mock_mode:
+        mock_id = "11111111-1111-1111-1111-111111111111"
+        MOCK_PROFILES[mock_id] = {
+            "id": mock_id,
+            "email": credentials.email,
+            "is_pro": False,
+            "pro_until": None,
+            "meetings_used": 0,
+            "razorpay_subscription_id": None,
+            "referred_by": credentials.referral_code if credentials.referral_code else None,
+            "referral_code": "demo1234"
+        }
         return {
             "message": "Signup successful (Mock Mode)",
             "user": {
-                "id": "11111111-1111-1111-1111-111111111111",
+                "id": mock_id,
                 "email": credentials.email,
             },
         }
@@ -165,15 +178,26 @@ async def signup(request: Request, credentials: UserCredentials):
 
         user_id = auth_resp.user.id
 
+        # Resolve referred_by if referral_code is provided
+        referred_by_id = None
+        if credentials.referral_code:
+            try:
+                referrer_res = supabase.table("profiles").select("id").eq("referral_code", credentials.referral_code).maybe_single().execute()
+                if referrer_res.data:
+                    referred_by_id = referrer_res.data.get("id")
+            except Exception as ref_exc:
+                logger.error("Failed to resolve referral code %s: %s", credentials.referral_code, ref_exc)
+
         # Insert user profile row
         try:
-            supabase.table("profiles").insert(
-                {
-                    "id": user_id,
-                    "is_pro": False,
-                    "meetings_used": 0,
-                }
-            ).execute()
+            profile_payload = {
+                "id": user_id,
+                "is_pro": False,
+                "meetings_used": 0,
+            }
+            if referred_by_id:
+                profile_payload["referred_by"] = referred_by_id
+            supabase.table("profiles").insert(profile_payload).execute()
         except Exception as profile_exc:
             logger.error("Failed to auto-create profile for user %s: %s", user_id, profile_exc)
             raise HTTPException(
@@ -384,7 +408,9 @@ async def get_profile(current_user = Depends(get_current_user)):
                 "is_pro": False,
                 "pro_until": None,
                 "meetings_used": meetings_count,
-                "razorpay_subscription_id": None
+                "razorpay_subscription_id": None,
+                "referred_by": None,
+                "referral_code": "demo1234"
             }
         return ProfileResponse(**MOCK_PROFILES[user_id_str])
 
@@ -406,14 +432,16 @@ async def get_profile(current_user = Depends(get_current_user)):
         profile_data = result.data
         
         if not profile_data:
-            profile_data = {
+            profile_payload = {
                 "id": user_id_str,
                 "is_pro": False,
                 "pro_until": None,
                 "meetings_used": 0,
                 "razorpay_subscription_id": None
             }
-            supabase.table("profiles").insert(profile_data).execute()
+            supabase.table("profiles").insert(profile_payload).execute()
+            refetch_res = supabase.table("profiles").select("*").eq("id", user_id_str).maybe_single().execute()
+            profile_data = refetch_res.data if refetch_res.data else profile_payload
         
         profile_data["email"] = current_user.email
         return ProfileResponse(**profile_data)
@@ -431,58 +459,8 @@ async def get_profile(current_user = Depends(get_current_user)):
 
 
 async def check_limits(current_user = Depends(get_current_user)):
-    """Dependency to check if user has exceeded their free tier usage limits."""
-    settings = get_settings()
-    user_id_str = str(current_user.id)
-    
-    if settings.mock_mode or user_id_str == "11111111-1111-1111-1111-111111111111":
-        if user_id_str not in MOCK_PROFILES:
-            try:
-                from routes.meetings import MOCK_MEETINGS
-                meetings_count = len([m for m in MOCK_MEETINGS if str(m["user_id"]) == user_id_str])
-            except Exception:
-                meetings_count = 0
-            
-            MOCK_PROFILES[user_id_str] = {
-                "id": user_id_str,
-                "email": current_user.email,
-                "is_pro": False,
-                "pro_until": None,
-                "meetings_used": meetings_count,
-                "razorpay_subscription_id": None
-            }
-        profile = MOCK_PROFILES[user_id_str]
-    else:
-        try:
-            supabase = get_supabase()
-            import asyncio
-            async def fetch_limits():
-                return supabase.table("profiles").select("*").eq("id", user_id_str).maybe_single().execute()
-            result = await asyncio.wait_for(fetch_limits(), timeout=10.0)
-            profile = result.data
-            if not profile:
-                profile = {
-                    "id": user_id_str,
-                    "is_pro": False,
-                    "pro_until": None,
-                    "meetings_used": 0,
-                    "razorpay_subscription_id": None
-                }
-        except asyncio.TimeoutError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_408_REQUEST_TIMEOUT,
-                detail="Database request timed out.",
-            ) from exc
-        except Exception as exc:
-            logger.error("Failed to query user profile for limits: %s", exc)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to retrieve user profile for limit check",
-            ) from exc
-
-    if not profile.get("is_pro", False) and profile.get("meetings_used", 0) >= 3:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Upgrade to Pro",
-        )
-    return profile
+    """
+    BETA MODE: All limits disabled during free launch.
+    TODO: Re-enable when Razorpay KYC is complete.
+    """
+    return current_user

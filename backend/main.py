@@ -15,6 +15,7 @@ from routes.auth import router as auth_router
 from routes.qa import router as qa_router
 from routes.payments import router as payments_router
 from routes.cron import router as cron_router
+from routes.stats import router as stats_router
 from utils.limiter import limiter
 from utils.logger import setup_logger
 from utils.error_handler import global_exception_handler
@@ -34,6 +35,9 @@ setup_logger()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    print("\n" + "="*50)
+    print("      MEETMIND BACKEND STARTED (BETA FREE MODE)")
+    print("="*50 + "\n")
     yield
 
 app = FastAPI(
@@ -89,10 +93,15 @@ app.include_router(meetings_router, prefix="/api/v1")
 app.include_router(qa_router, prefix="/api/v1")
 app.include_router(payments_router, prefix="/api/v1")
 app.include_router(cron_router, prefix="/api/v1")
+app.include_router(stats_router, prefix="/api/v1")
 
 @app.get("/")
 async def root():
-    return {"status": "MeetMind backend is live"}
+    return {
+        "status": "MeetMind backend is live",
+        "mode": "Beta Free Mode",
+        "documentation": "/docs"
+    }
 
 @app.get("/health")
 @app.get("/api/v1/health")

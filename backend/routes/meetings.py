@@ -117,14 +117,13 @@ async def upload_meeting(
     content = await file.read()
     file_size = len(content)
 
-    is_pro = profile.get("is_pro", False) if profile else False
-
-    # Check file size limit
-    max_bytes = MAX_FILE_SIZE_PRO if is_pro else MAX_FILE_SIZE_FREE
+    # BETA MODE: All limits set to PRO tier (500MB)
+    is_pro = True
+    max_bytes = MAX_FILE_SIZE_PRO
     if file_size > max_bytes:
         raise HTTPException(
             status_code=413,
-            detail="File too large. Free tier limit is 100MB. Upgrade to Pro for 500MB."
+            detail="File too large. Beta limit is 500MB."
         )
 
     # Check empty file
@@ -207,7 +206,10 @@ async def upload_meeting(
 
     # Increment meetings_used in profiles table
     try:
-        current_used = profile.get("meetings_used", 0)
+        profile_res = await run_db_query(
+            supabase.table("profiles").select("meetings_used").eq("id", resolved_user_id).maybe_single().execute
+        )
+        current_used = profile_res.data.get("meetings_used", 0) if (profile_res and profile_res.data) else 0
         await run_db_query(
             supabase.table("profiles").update({"meetings_used": current_used + 1}).eq("id", resolved_user_id).execute
         )
@@ -470,11 +472,6 @@ async def export_meeting_pdf(
     profile = Depends(check_limits)
 ):
     """Export Minutes of Meeting (MOM) as a beautifully formatted PDF."""
-    if not profile.get("is_pro", False):
-        raise HTTPException(
-            status_code=403,
-            detail="Exporting is a Pro feature. Please upgrade to Pro."
-        )
 
     settings = get_settings()
     meeting = None
@@ -634,11 +631,6 @@ async def export_meeting_docx(
     profile = Depends(check_limits)
 ):
     """Export Minutes of Meeting (MOM) as a Microsoft Word Document (DOCX)."""
-    if not profile.get("is_pro", False):
-        raise HTTPException(
-            status_code=403,
-            detail="Exporting is a Pro feature. Please upgrade to Pro."
-        )
 
     settings = get_settings()
     meeting = None

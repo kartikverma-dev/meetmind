@@ -64,7 +64,11 @@ class TestMeetMindCore(unittest.TestCase):
     def test_root_endpoint(self):
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {"status": "MeetMind backend is live"})
+        self.assertEqual(response.json(), {
+            "status": "MeetMind backend is live",
+            "mode": "Beta Free Mode",
+            "documentation": "/docs"
+        })
 
     def test_health_endpoint(self):
         response = self.client.get("/health")
@@ -463,7 +467,7 @@ class TestMeetMindCore(unittest.TestCase):
 
     @patch("routes.auth.get_supabase")
     @patch("routes.meetings.get_supabase")
-    def test_limit_checking_block(self, mock_meetings_supabase, mock_auth_supabase):
+    def test_limit_checking_allowed(self, mock_meetings_supabase, mock_auth_supabase):
         # Mock auth
         mock_auth_db = MagicMock()
         mock_auth_supabase.return_value = mock_auth_db
@@ -474,7 +478,7 @@ class TestMeetMindCore(unittest.TestCase):
         mock_auth_resp.user = mock_user
         mock_auth_db.auth.get_user.return_value = mock_auth_resp
 
-        # Mock profile: not is_pro and meetings_used = 3
+        # Mock profile: not is_pro and meetings_used = 3 (limit is 3 for free, but free beta allows it)
         mock_auth_db.table.return_value.select.return_value.eq.return_value.maybe_single.return_value.execute.return_value.data = {
             "id": "22222222-2222-2222-2222-222222222222",
             "is_pro": False,
@@ -482,22 +486,22 @@ class TestMeetMindCore(unittest.TestCase):
             "razorpay_subscription_id": None
         }
 
-        # Mock file upload body
-        from io import BytesIO
-        file_io = BytesIO(b"fake audio data")
+        # Mock meetings DB
+        mock_meet_db = MagicMock()
+        mock_meetings_supabase.return_value = mock_meet_db
 
+        # Upload an empty file - it should pass the limit check and get rejected with 400 bad request (empty file) instead of 403
         response = self.client.post(
             "/meetings/upload",
-            files={"file": ("test_meeting.mp3", file_io, "audio/mpeg")},
+            files={"file": ("test_meeting.mp3", b"", "audio/mpeg")},
             data={"title": "Test Title"},
             headers=self.auth_headers
         )
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()["detail"], "Upgrade to Pro")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("empty or corrupt", response.json()["detail"].lower())
 
     @patch("routes.auth.get_supabase")
-    @patch("routes.payments.get_supabase")
-    def test_mock_upgrade_success(self, mock_payments_supabase, mock_auth_supabase):
+    def test_mock_upgrade_success(self, mock_auth_supabase):
         # Mock auth
         mock_auth_db = MagicMock()
         mock_auth_supabase.return_value = mock_auth_db
@@ -508,18 +512,13 @@ class TestMeetMindCore(unittest.TestCase):
         mock_auth_resp.user = mock_user
         mock_auth_db.auth.get_user.return_value = mock_auth_resp
 
-        # Mock payments DB update
-        mock_pay_db = MagicMock()
-        mock_payments_supabase.return_value = mock_pay_db
-        mock_pay_db.table.return_value.update.return_value.eq.return_value.execute.return_value = MagicMock()
-
         response = self.client.post("/payments/mock-upgrade", headers=self.auth_headers)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["status"], "success")
+        self.assertEqual(response.json()["status"], "disabled")
 
     @patch("routes.auth.get_supabase")
     @patch("routes.meetings.get_supabase")
-    def test_export_pdf_not_pro_denied(self, mock_meetings_supabase, mock_auth_supabase):
+    def test_export_pdf_free_user_allowed(self, mock_meetings_supabase, mock_auth_supabase):
         # Mock auth
         mock_auth_db = MagicMock()
         mock_auth_supabase.return_value = mock_auth_db
@@ -538,12 +537,30 @@ class TestMeetMindCore(unittest.TestCase):
             "razorpay_subscription_id": None
         }
 
+        # Mock meeting database record with MOM
+        mock_meet_db = MagicMock()
+        mock_meetings_supabase.return_value = mock_meet_db
+        mock_meet_db.table.return_value.select.return_value.eq.return_value.maybe_single.return_value.execute.return_value.data = {
+            "id": "00000000-0000-0000-0000-000000000000",
+            "user_id": "22222222-2222-2222-2222-222222222222",
+            "title": "Free User Meeting",
+            "mom": {
+                "attendees": ["Alice", "Bob"],
+                "date": "2026-06-25",
+                "agenda": ["Test"],
+                "decisions": [],
+                "action_items": []
+            },
+            "status": "done",
+            "created_at": "2026-06-25T09:00:00+00:00"
+        }
+
         response = self.client.get(
             "/meetings/00000000-0000-0000-0000-000000000000/export/pdf",
             headers=self.auth_headers
         )
-        self.assertEqual(response.status_code, 403)
-        self.assertIn("Exporting is a Pro feature", response.json()["detail"])
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["content-type"], "application/pdf")
 
     @patch("routes.auth.get_supabase")
     @patch("routes.meetings.get_supabase")
@@ -638,16 +655,23 @@ class TestMeetMindCore(unittest.TestCase):
             "meetings_used": 1
         }
 
-        # Send request with > 100MB file (free user limit)
-        large_content = b"x" * (101 * 1024 * 1024)
-        response = self.client.post(
-            "/meetings/upload",
-            headers=self.auth_headers,
-            files={"file": ("large.mp3", large_content, "audio/mpeg")},
-            data={"title": "Large Meeting"}
-        )
-        self.assertEqual(response.status_code, 413)
-        self.assertIn("file too large", response.json()["detail"].lower())
+        # Modify MAX_FILE_SIZE_PRO temporarily
+        import routes.meetings
+        old_size = routes.meetings.MAX_FILE_SIZE_PRO
+        routes.meetings.MAX_FILE_SIZE_PRO = 100
+        try:
+            # Send request with > 100 bytes file
+            large_content = b"x" * 105
+            response = self.client.post(
+                "/meetings/upload",
+                headers=self.auth_headers,
+                files={"file": ("large.mp3", large_content, "audio/mpeg")},
+                data={"title": "Large Meeting"}
+            )
+            self.assertEqual(response.status_code, 413)
+            self.assertIn("file too large", response.json()["detail"].lower())
+        finally:
+            routes.meetings.MAX_FILE_SIZE_PRO = old_size
 
     @patch("routes.cron.get_supabase")
     def test_cron_reset_monthly_success(self, mock_cron_supabase):

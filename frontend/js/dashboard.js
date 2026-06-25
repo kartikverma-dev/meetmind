@@ -9,14 +9,8 @@ const progressFill = document.getElementById('progress-fill');
 const progressText = document.getElementById('progress-text');
 const meetingsGrid = document.getElementById('meetings-grid');
 const emptyState = document.getElementById('empty-state');
-const upgradeBanner = document.getElementById('upgrade-banner');
-const upgradeBtn = document.getElementById('upgrade-btn');
-const upgradeModal = document.getElementById('upgrade-modal');
-const modalPayBtn = document.getElementById('modal-pay-btn');
-const modalCloseBtn = document.getElementById('modal-close-btn');
 
 let selectedFile = null;
-let userIsPro = false;
 
 // Format Date Utility
 function formatDate(isoString) {
@@ -34,38 +28,34 @@ function formatDate(isoString) {
   }
 }
 
-// Check Profile (Pro vs Free)
+// Check Profile & Populate Beta Badges/Referral info
 async function fetchUserProfile() {
   try {
     const response = await fetchWithAuth(`${API_BASE_URL}/api/v1/auth/profile`);
     if (response.ok) {
       const data = await response.json();
-      userIsPro = data.is_pro;
-      localStorage.setItem('meetmind_is_pro', userIsPro ? 'true' : 'false');
       
       const userDisplay = document.getElementById('user-display');
       if (userDisplay) {
         const user = getLoggedInUser();
         const email = (user && user.email) || data.email || 'User';
-        const tierText = userIsPro ? 'Pro' : `Free (${data.meetings_used}/3 meetings)`;
-        userDisplay.textContent = `${email} [${tierText}]`;
+        userDisplay.textContent = `${email} [Beta User — Full Access]`;
       }
-    } else {
-      userIsPro = localStorage.getItem('meetmind_is_pro') === 'true';
+
+      // Populate referral link
+      const referralLinkInput = document.getElementById('referral-link-input');
+      if (referralLinkInput) {
+        referralLinkInput.value = `https://meetmind-nine.vercel.app?ref=${data.referral_code}`;
+      }
+
+      // Display Share Banner if not dismissed
+      const shareBanner = document.getElementById('share-banner');
+      if (shareBanner && !localStorage.getItem('dismissed_share_banner')) {
+        shareBanner.style.display = 'flex';
+      }
     }
-    updateUpgradeUI();
   } catch (err) {
     console.error("Error checking profile:", err);
-    userIsPro = localStorage.getItem('meetmind_is_pro') === 'true';
-    updateUpgradeUI();
-  }
-}
-
-function updateUpgradeUI() {
-  if (userIsPro) {
-    upgradeBanner.style.display = 'none';
-  } else {
-    upgradeBanner.style.display = 'flex';
   }
 }
 
@@ -283,44 +273,117 @@ processBtn.addEventListener('click', async () => {
   }
 });
 
-// Upgrade Modal logic
-upgradeBtn.addEventListener('click', () => {
-  upgradeModal.style.display = 'flex';
-});
+// Dismiss share banner
+const closeShareBanner = document.getElementById('close-share-banner');
+if (closeShareBanner) {
+  closeShareBanner.addEventListener('click', () => {
+    document.getElementById('share-banner').style.display = 'none';
+    localStorage.setItem('dismissed_share_banner', 'true');
+  });
+}
 
-modalCloseBtn.addEventListener('click', () => {
-  upgradeModal.style.display = 'none';
-});
-
-modalPayBtn.addEventListener('click', async () => {
-  modalPayBtn.disabled = true;
-  modalPayBtn.textContent = 'Processing payment...';
-  
-  try {
-    const response = await fetchWithAuth(`${API_BASE_URL}/api/v1/payments/mock-upgrade`, {
-      method: 'POST'
+// Copy referral link button
+const copyRefBtn = document.getElementById('copy-ref-btn');
+if (copyRefBtn) {
+  copyRefBtn.addEventListener('click', () => {
+    const input = document.getElementById('referral-link-input');
+    const msg = `Enjoying MeetMind? Share it with your friends and get lifetime priority access! Register here: ${input.value}`;
+    navigator.clipboard.writeText(msg).then(() => {
+      copyRefBtn.textContent = 'Copied!';
+      setTimeout(() => {
+        copyRefBtn.textContent = 'Copy Link';
+      }, 2000);
     });
-    
-    if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.detail || 'Payment failed');
-    }
-    
-    localStorage.setItem('meetmind_is_pro', 'true');
-    userIsPro = true;
-    updateUpgradeUI();
-    upgradeModal.style.display = 'none';
-    
-    await fetchUserProfile();
-    
-    alert('Subscription successful! You are now a MeetMind Pro user.');
-  } catch (err) {
-    alert(`Payment error: ${err.message}`);
-  } finally {
-    modalPayBtn.disabled = false;
-    modalPayBtn.textContent = 'Pay via Razorpay';
-  }
+  });
+}
+
+// Feedback Widget Modal logic
+let selectedRating = 0;
+const feedbackModal = document.getElementById('feedback-modal');
+const feedbackWidgetBtn = document.getElementById('feedback-widget-btn');
+const closeFeedbackModal = document.getElementById('close-feedback-modal');
+const submitFeedbackBtn = document.getElementById('submit-feedback-btn');
+const stars = document.querySelectorAll('.feedback-star');
+
+if (feedbackWidgetBtn) {
+  feedbackWidgetBtn.addEventListener('click', () => {
+    selectedRating = 0;
+    stars.forEach(s => s.style.color = 'var(--text-muted)');
+    document.getElementById('feedback-message').value = '';
+    document.getElementById('feedback-alert').style.display = 'none';
+    document.getElementById('feedback-success').style.display = 'none';
+    feedbackModal.style.display = 'flex';
+  });
+}
+
+if (closeFeedbackModal) {
+  closeFeedbackModal.addEventListener('click', () => {
+    feedbackModal.style.display = 'none';
+  });
+}
+
+stars.forEach(star => {
+  star.addEventListener('mouseover', () => {
+    const rating = parseInt(star.getAttribute('data-rating'));
+    stars.forEach(s => {
+      if (parseInt(s.getAttribute('data-rating')) <= rating) {
+        s.style.color = '#F59E0B';
+      } else {
+        s.style.color = 'var(--text-muted)';
+      }
+    });
+  });
+  star.addEventListener('mouseout', () => {
+    stars.forEach(s => {
+      if (parseInt(s.getAttribute('data-rating')) <= selectedRating) {
+        s.style.color = '#F59E0B';
+      } else {
+        s.style.color = 'var(--text-muted)';
+      }
+    });
+  });
+  star.addEventListener('click', () => {
+    selectedRating = parseInt(star.getAttribute('data-rating'));
+  });
 });
+
+if (submitFeedbackBtn) {
+  submitFeedbackBtn.addEventListener('click', async () => {
+    if (selectedRating === 0) {
+      const alertEl = document.getElementById('feedback-alert');
+      alertEl.textContent = 'Please select a star rating.';
+      alertEl.style.display = 'block';
+      return;
+    }
+    const message = document.getElementById('feedback-message').value;
+    const successEl = document.getElementById('feedback-success');
+    const alertEl = document.getElementById('feedback-alert');
+    
+    alertEl.style.display = 'none';
+    submitFeedbackBtn.disabled = true;
+    submitFeedbackBtn.textContent = 'Submitting...';
+    
+    try {
+      const url = `${API_BASE_URL}/api/v1/stats/feedback?rating=${selectedRating}&message=${encodeURIComponent(message)}&page=dashboard`;
+      const res = await fetchWithAuth(url, { method: 'POST' });
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.detail || 'Failed to submit feedback.');
+      }
+      successEl.textContent = 'Thank you for your feedback!';
+      successEl.style.display = 'block';
+      setTimeout(() => {
+        feedbackModal.style.display = 'none';
+      }, 1500);
+    } catch (err) {
+      alertEl.textContent = err.message;
+      alertEl.style.display = 'block';
+    } finally {
+      submitFeedbackBtn.disabled = false;
+      submitFeedbackBtn.textContent = 'Submit Feedback';
+    }
+  });
+}
 
 // Cold Start Health Check
 async function checkServerHealth() {
@@ -388,6 +451,26 @@ async function checkServerHealth() {
       }, 3000);
     }
   }
+}
+
+// Logout event
+const logoutBtn = document.getElementById('logout-btn');
+if (logoutBtn) {
+  logoutBtn.addEventListener('click', () => {
+    logout();
+  });
+}
+
+function logout() {
+  localStorage.removeItem('meetmind_user');
+  localStorage.removeItem('meetmind_is_pro');
+  // Clear mock token too
+  localStorage.removeItem('mock_token');
+  // Trigger cookies clear in backend
+  fetch(`${API_BASE_URL}/api/v1/auth/logout`, { method: 'POST', credentials: 'include' })
+    .finally(() => {
+      window.location.href = 'login.html';
+    });
 }
 
 // Initial load

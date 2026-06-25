@@ -405,14 +405,8 @@ function appendChatBubble(text, sender) {
   return bubble;
 }
 
-// Export and Upgrade Checking
-async function checkExportTier(type) {
-  const isPro = localStorage.getItem('meetmind_is_pro') === 'true';
-  if (!isPro) {
-    exportUpgradeModal.style.display = 'flex';
-    return;
-  }
-  
+// Export files without pro check
+async function exportMeetingMinutes(type) {
   try {
     const response = await fetchWithAuth(`${API_BASE_URL}/api/v1/meetings/${meetingId}/export/${type}`);
     
@@ -437,32 +431,114 @@ async function checkExportTier(type) {
   }
 }
 
-exportPdfBtn.addEventListener('click', () => checkExportTier('pdf'));
-exportDocxBtn.addEventListener('click', () => checkExportTier('docx'));
+exportPdfBtn.addEventListener('click', () => exportMeetingMinutes('pdf'));
+exportDocxBtn.addEventListener('click', () => exportMeetingMinutes('docx'));
 
-exportModalCloseBtn.addEventListener('click', () => {
-  exportUpgradeModal.style.display = 'none';
-});
-
-exportUpgradeBtn.addEventListener('click', async () => {
-  exportUpgradeModal.style.display = 'none';
-  
+// Fetch User Profile to populate user badge
+async function fetchUserProfile() {
   try {
-    const response = await fetchWithAuth(`${API_BASE_URL}/api/v1/payments/mock-upgrade`, {
-      method: 'POST'
-    });
-    
-    if (!response.ok) {
+    const response = await fetchWithAuth(`${API_BASE_URL}/api/v1/auth/profile`);
+    if (response.ok) {
       const data = await response.json();
-      throw new Error(data.detail || 'Upgrade failed');
+      const userDisplay = document.getElementById('user-display');
+      if (userDisplay) {
+        const user = getLoggedInUser();
+        const email = (user && user.email) || data.email || 'User';
+        userDisplay.textContent = `${email} [Beta User — Full Access]`;
+      }
     }
-    
-    localStorage.setItem('meetmind_is_pro', 'true');
-    alert('Upgraded to Pro! Try exporting again.');
   } catch (err) {
-    alert(`Upgrade failed: ${err.message}`);
+    console.error("Error checking profile:", err);
   }
+}
+
+// Feedback Widget Modal logic
+let selectedRating = 0;
+const feedbackModal = document.getElementById('feedback-modal');
+const feedbackWidgetBtn = document.getElementById('feedback-widget-btn');
+const closeFeedbackModal = document.getElementById('close-feedback-modal');
+const submitFeedbackBtn = document.getElementById('submit-feedback-btn');
+const stars = document.querySelectorAll('.feedback-star');
+
+if (feedbackWidgetBtn) {
+  feedbackWidgetBtn.addEventListener('click', () => {
+    selectedRating = 0;
+    stars.forEach(s => s.style.color = 'var(--text-muted)');
+    document.getElementById('feedback-message').value = '';
+    document.getElementById('feedback-alert').style.display = 'none';
+    document.getElementById('feedback-success').style.display = 'none';
+    feedbackModal.style.display = 'flex';
+  });
+}
+
+if (closeFeedbackModal) {
+  closeFeedbackModal.addEventListener('click', () => {
+    feedbackModal.style.display = 'none';
+  });
+}
+
+stars.forEach(star => {
+  star.addEventListener('mouseover', () => {
+    const rating = parseInt(star.getAttribute('data-rating'));
+    stars.forEach(s => {
+      if (parseInt(s.getAttribute('data-rating')) <= rating) {
+        s.style.color = '#F59E0B';
+      } else {
+        s.style.color = 'var(--text-muted)';
+      }
+    });
+  });
+  star.addEventListener('mouseout', () => {
+    stars.forEach(s => {
+      if (parseInt(s.getAttribute('data-rating')) <= selectedRating) {
+        s.style.color = '#F59E0B';
+      } else {
+        s.style.color = 'var(--text-muted)';
+      }
+    });
+  });
+  star.addEventListener('click', () => {
+    selectedRating = parseInt(star.getAttribute('data-rating'));
+  });
 });
+
+if (submitFeedbackBtn) {
+  submitFeedbackBtn.addEventListener('click', async () => {
+    if (selectedRating === 0) {
+      const alertEl = document.getElementById('feedback-alert');
+      alertEl.textContent = 'Please select a star rating.';
+      alertEl.style.display = 'block';
+      return;
+    }
+    const message = document.getElementById('feedback-message').value;
+    const successEl = document.getElementById('feedback-success');
+    const alertEl = document.getElementById('feedback-alert');
+    
+    alertEl.style.display = 'none';
+    submitFeedbackBtn.disabled = true;
+    submitFeedbackBtn.textContent = 'Submitting...';
+    
+    try {
+      const url = `${API_BASE_URL}/api/v1/stats/feedback?rating=${selectedRating}&message=${encodeURIComponent(message)}&page=meeting`;
+      const res = await fetchWithAuth(url, { method: 'POST' });
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.detail || 'Failed to submit feedback.');
+      }
+      successEl.textContent = 'Thank you for your feedback!';
+      successEl.style.display = 'block';
+      setTimeout(() => {
+        feedbackModal.style.display = 'none';
+      }, 1500);
+    } catch (err) {
+      alertEl.textContent = err.message;
+      alertEl.style.display = 'block';
+    } finally {
+      submitFeedbackBtn.disabled = false;
+      submitFeedbackBtn.textContent = 'Submit Feedback';
+    }
+  });
+}
 
 function showMessage(msg) {
   let msgEl = document.getElementById('cold-start-warning');
@@ -499,5 +575,7 @@ document.addEventListener('DOMContentLoaded', () => {
   meetingId = getMeetingIdFromURL();
   pollStartTime = Date.now();
   showMessage("Processing your meeting... this may take 30-60 seconds on first load");
+  fetchUserProfile();
   fetchMeetingDetails();
 });
+

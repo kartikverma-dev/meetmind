@@ -51,6 +51,7 @@ from pydantic import BaseModel, Field, field_validator
 class UserCredentials(BaseModel):
     email: str
     password: str
+    referral_code: Optional[str] = None
 
     @field_validator("email")
     @classmethod
@@ -98,5 +99,7 @@ class ProfileResponse(BaseModel):
     pro_until: Optional[datetime] = None
     meetings_used: int
     razorpay_subscription_id: Optional[str] = None
+    referred_by: Optional[str] = None
+    referral_code: Optional[str] = None
 
 

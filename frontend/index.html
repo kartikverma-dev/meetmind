@@ -7,6 +7,307 @@
   <title>MeetMind — AI-Powered Meeting Summarizer</title>
   <meta name="description" content="Generate Minutes of Meetings (MOM), 5-bullet summaries, and ask questions about your meetings instantly.">
   <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* Premium Theme Overrides & Additions */
+    body {
+      background-color: #0a0a1a;
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(79, 142, 247, 0.12) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.12) 0px, transparent 50%),
+        radial-gradient(at 50% 100%, rgba(79, 142, 247, 0.05) 0px, transparent 50%);
+    }
+
+    header {
+      background: rgba(10, 10, 26, 0.75);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    /* Hero Section Redesign */
+    .hero-section {
+      padding: 9rem 1rem 6rem;
+      max-width: 900px;
+      margin: 0 auto;
+      text-align: center;
+      position: relative;
+    }
+
+    .hero-section h1 {
+      font-size: 4rem;
+      line-height: 1.1;
+      font-weight: 800;
+      letter-spacing: -2px;
+      margin-bottom: 1.5rem;
+    }
+
+    .hero-section h1 span {
+      background: linear-gradient(135deg, #4F8EF7, #8B5CF6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-section p {
+      font-size: 1.25rem;
+      color: #9CA3AF;
+      max-width: 700px;
+      margin: 0 auto 2.5rem;
+      line-height: 1.6;
+    }
+
+    .hero-badge {
+      background: rgba(79, 142, 247, 0.1);
+      border: 1px solid rgba(79, 142, 247, 0.25);
+      color: #4F8EF7;
+      padding: 0.5rem 1.25rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      margin-bottom: 2rem;
+    }
+
+    .hero-social-proof {
+      margin-top: 3.5rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 1.5rem;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 0.75rem 1.5rem;
+      border-radius: 50px;
+      font-size: 0.9rem;
+      color: #9CA3AF;
+    }
+
+    .hero-social-proof span.highlight {
+      color: #FFF;
+      font-weight: 700;
+    }
+
+    /* Section Headers */
+    .section-title {
+      text-align: center;
+      margin-bottom: 4rem;
+      padding: 0 1rem;
+    }
+
+    .section-title h2 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      letter-spacing: -1px;
+    }
+
+    .section-title h2 span {
+      background: linear-gradient(135deg, #4F8EF7, #8B5CF6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .section-title p {
+      color: #9CA3AF;
+      margin-top: 0.75rem;
+      font-size: 1.1rem;
+    }
+
+    /* Problem Section */
+    .problem-section {
+      padding: 6rem 1rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .problem-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+      margin-top: 3rem;
+    }
+
+    .problem-card {
+      padding: 2.5rem;
+      border-radius: 16px;
+      border: 1px solid rgba(239, 68, 68, 0.1);
+      background: rgba(239, 68, 68, 0.02);
+      transition: all 0.3s ease;
+    }
+
+    .problem-card:hover {
+      border-color: rgba(239, 68, 68, 0.2);
+      background: rgba(239, 68, 68, 0.04);
+      transform: translateY(-4px);
+    }
+
+    .problem-card .icon-red {
+      color: #EF4444;
+      margin-bottom: 1.25rem;
+      display: inline-block;
+    }
+
+    /* How It Works Section */
+    .how-section {
+      padding: 6rem 1rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2.5rem;
+    }
+
+    .step-card {
+      position: relative;
+      padding: 2.5rem;
+      border-radius: 16px;
+    }
+
+    .step-number {
+      position: absolute;
+      top: -20px;
+      left: 24px;
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #4F8EF7, #8B5CF6);
+      color: #FFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      font-weight: 800;
+      font-size: 1.1rem;
+      box-shadow: 0 4px 15px rgba(79, 142, 247, 0.3);
+    }
+
+    /* Features Grid Adjustments */
+    .features-grid {
+      padding: 0 1rem;
+      margin-bottom: 6rem;
+    }
+
+    .feature-card {
+      border-radius: 16px;
+      transition: all 0.3s ease;
+    }
+
+    .feature-card:hover {
+      border-color: rgba(79, 142, 247, 0.3);
+      transform: translateY(-4px);
+      box-shadow: 0 10px 30px rgba(79, 142, 247, 0.08);
+    }
+
+    /* Beta Pricing Card styling */
+    .pricing-card.beta-card {
+      border: 1px solid rgba(79, 142, 247, 0.3);
+      background: linear-gradient(145deg, rgba(79, 142, 247, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+      box-shadow: 0 0 40px rgba(79, 142, 247, 0.1);
+      max-width: 450px;
+      margin: 3rem auto 0;
+      border-radius: 20px;
+    }
+
+    .pricing-card.beta-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: linear-gradient(90deg, #4F8EF7, #8B5CF6);
+    }
+
+    .beta-badge {
+      background: linear-gradient(135deg, #4F8EF7, #8B5CF6);
+      color: #FFF;
+      padding: 0.35rem 1rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      border-radius: 50px;
+      display: inline-block;
+      margin-bottom: 1.5rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* Stats Bar Section */
+    .stats-bar-section {
+      background: rgba(255, 255, 255, 0.02);
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 4rem 1rem;
+      margin: 6rem 0;
+    }
+
+    .stats-bar-container {
+      max-width: 1000px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 3rem;
+    }
+
+    .stat-item {
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 3.5rem;
+      font-weight: 800;
+      color: #FFF;
+      line-height: 1;
+      margin-bottom: 0.5rem;
+      font-family: 'Outfit', sans-serif;
+      background: linear-gradient(135deg, #FFF, #9CA3AF);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .stat-label {
+      font-size: 1rem;
+      color: #9CA3AF;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 600;
+    }
+
+    /* Footer Section */
+    footer {
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 4rem 1rem;
+      text-align: center;
+      color: #6B7280;
+      background: #060612;
+    }
+
+    .footer-logo {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #FFF;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .footer-logo span {
+      color: #4F8EF7;
+    }
+
+    @media (max-width: 768px) {
+      .hero-section h1 {
+        font-size: 2.75rem;
+      }
+      .stats-bar-container {
+        flex-direction: column;
+        gap: 2.5rem;
+      }
+    }
+  </style>
 </head>
 <body>
 
@@ -26,84 +327,188 @@
 
   <!-- Hero Section -->
   <section class="hero-section">
-    <div class="hero-badge">AI-Powered Meeting Intelligence</div>
-    <h1>Turn Meeting Audio into <span>Actionable Insights</span></h1>
-    <p>Upload your meeting recordings or transcripts. Instantly generate professional Minutes of Meetings (MOM), executive summaries, and interact with an AI assistant that knows every detail.</p>
+    <div class="hero-badge">FREE BETA LAUNCH NOW ACTIVE</div>
+    <h1>Turn Meeting Audio into <br><span>Actionable Insights</span></h1>
+    <p>Upload meeting recordings. Get instant Minutes of Meetings (MOM), executive summaries, and interact with a smart AI assistant that knows every detail.</p>
     <div>
-      <a href="signup.html" class="btn btn-primary" style="font-size: 1.1rem; padding: 0.85rem 2rem;">Get Started Free</a>
+      <a href="signup.html" class="btn btn-primary" style="font-size: 1.15rem; padding: 1rem 2.5rem; border-radius: 8px;">Claim Free Access Now</a>
+    </div>
+    
+    <div class="hero-social-proof">
+      <span>🚀 Joint by <span class="highlight" id="stat-users-hero">150+</span> early users</span>
+      <span>•</span>
+      <span>🎙️ <span class="highlight" id="stat-meetings-hero">420+</span> meetings processed</span>
+    </div>
+  </section>
+
+  <!-- Problem Section -->
+  <section class="problem-section">
+    <div class="section-title">
+      <h2>Why Meetings <span>Feel Like Waste</span></h2>
+      <p>The standard way we handle meetings is completely broken.</p>
+    </div>
+    <div class="problem-grid">
+      <div class="problem-card">
+        <div class="icon-red">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <h3 style="margin-bottom: 0.75rem; font-weight: 700;">Lost Time</h3>
+        <p style="color: #9CA3AF; font-size: 0.95rem; line-height: 1.5;">Writing manuals notes takes focus away from the discussion and wastes hours of post-meeting summarization work.</p>
+      </div>
+      <div class="problem-card">
+        <div class="icon-red">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+        </div>
+        <h3 style="margin-bottom: 0.75rem; font-weight: 700;">Forgotten Actions</h3>
+        <p style="color: #9CA3AF; font-size: 0.95rem; line-height: 1.5;">Action items, deadlines, and crucial details slip through the cracks, leading to duplicate alignments.</p>
+      </div>
+      <div class="problem-card">
+        <div class="icon-red">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        </div>
+        <h3 style="margin-bottom: 0.75rem; font-weight: 700;">Information Siloing</h3>
+        <p style="color: #9CA3AF; font-size: 0.95rem; line-height: 1.5;">Absent team members miss out entirely, leading to long briefings or missed context on decisions.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works Section -->
+  <section class="how-section">
+    <div class="section-title">
+      <h2>How <span>MeetMind Works</span></h2>
+      <p>Transform your workflow in three simple steps.</p>
+    </div>
+    <div class="steps-grid">
+      <div class="step-card glass-card">
+        <div class="step-number">1</div>
+        <h3 style="margin-top: 0.5rem; margin-bottom: 0.75rem; font-weight: 700;">Upload Audio</h3>
+        <p style="color: #9CA3AF; font-size: 0.95rem;">Drag & drop your MP3, WAV, or M4A recording file directly into the dashboard. Whisper automatically starts transcription.</p>
+      </div>
+      <div class="step-card glass-card">
+        <div class="step-number">2</div>
+        <h3 style="margin-top: 0.5rem; margin-bottom: 0.75rem; font-weight: 700;">AI Synthesis</h3>
+        <p style="color: #9CA3AF; font-size: 0.95rem;">Gemini parses the transcript to extract structured data: attendee lists, agendas, key decisions, and deadline assignments.</p>
+      </div>
+      <div class="step-card glass-card">
+        <div class="step-number">3</div>
+        <h3 style="margin-top: 0.5rem; margin-bottom: 0.75rem; font-weight: 700;">Query & Export</h3>
+        <p style="color: #9CA3AF; font-size: 0.95rem;">Export beautiful PDFs or Word files. Use the integrated meeting assistant to ask follow-up questions about who said what.</p>
+      </div>
     </div>
   </section>
 
   <!-- Features Section -->
-  <section class="features-grid">
-    <div class="feature-card glass-card">
-      <div class="icon">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-      </div>
-      <h3>Automated Transcription</h3>
-      <p style="color: var(--text-secondary); margin-top: 0.5rem; font-size: 0.95rem;">Powered by local Whisper models to transcribe speech to text with outstanding accuracy, completely free.</p>
+  <section class="features-grid-wrapper">
+    <div class="section-title">
+      <h2>Features Built for <span>Productivity</span></h2>
+      <p>Everything you need to capture, parse, and utilize meeting knowledge.</p>
     </div>
-    
-    <div class="feature-card glass-card">
-      <div class="icon">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    <div class="features-grid">
+      <div class="feature-card glass-card">
+        <div class="icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        </div>
+        <h3 style="font-weight: 700;">Voice Recognition</h3>
+        <p style="color: #9CA3AF; margin-top: 0.5rem; font-size: 0.95rem;">Whisper models transcribe your recordings into high-fidelity text with robust multi-speaker dynamics.</p>
       </div>
-      <h3>Instant MOM & Summary</h3>
-      <p style="color: var(--text-secondary); margin-top: 0.5rem; font-size: 0.95rem;">Get meeting details: attendees, decisions made, action items with owners, and a high-level 5-bullet summary.</p>
-    </div>
+      
+      <div class="feature-card glass-card">
+        <div class="icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <h3 style="font-weight: 700;">Actionable MOM</h3>
+        <p style="color: #9CA3AF; margin-top: 0.5rem; font-size: 0.95rem;">Clean formatting of agendas, attendee directories, and table lists showing task owners and deadlines.</p>
+      </div>
 
-    <div class="feature-card glass-card">
-      <div class="icon">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+      <div class="feature-card glass-card">
+        <div class="icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <h3 style="font-weight: 700;">Ask Anything Bot</h3>
+        <p style="color: #9CA3AF; margin-top: 0.5rem; font-size: 0.95rem;">Enter follow-up queries. Get instant answers directly supported by quotes from the meeting transcript.</p>
       </div>
-      <h3>Gemini Q&A Agent</h3>
-      <p style="color: var(--text-secondary); margin-top: 0.5rem; font-size: 0.95rem;">Ask questions about your meetings. Get accurate answers based on the transcript using Google Gemini.</p>
+
+      <div class="feature-card glass-card">
+        <div class="icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </div>
+        <h3 style="font-weight: 700;">DOCX & PDF Export</h3>
+        <p style="color: #9CA3AF; margin-top: 0.5rem; font-size: 0.95rem;">Compile summary sheets into executive-ready PDF documents or editable Microsoft Word files instantly.</p>
+      </div>
+
+      <div class="feature-card glass-card">
+        <div class="icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <h3 style="font-weight: 700;">Privacy-First Security</h3>
+        <p style="color: #9CA3AF; margin-top: 0.5rem; font-size: 0.95rem;">All sessions run securely. We enforce strict data storage settings so your corporate knowledge stays yours.</p>
+      </div>
+
+      <div class="feature-card glass-card">
+        <div class="icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <h3 style="font-weight: 700;">Lightning Fast</h3>
+        <p style="color: #9CA3AF; margin-top: 0.5rem; font-size: 0.95rem;">Get meeting transcripts and actionable insights compiled in minutes, not hours, using top-tier API connections.</p>
+      </div>
     </div>
   </section>
 
-  <!-- Pricing Section -->
+  <!-- Beta Pricing Section -->
   <section class="pricing-section">
-    <div class="pricing-header">
-      <h2 style="font-size: 2.2rem; font-weight: 800;">Choose Your Plan</h2>
-      <p style="color: var(--text-secondary); margin-top: 0.5rem;">Unlock more features as your needs grow.</p>
+    <div class="section-title">
+      <h2>Simple, Transparent <span>Pricing</span></h2>
+      <p>Access all premium features during our free beta launch period.</p>
     </div>
     
-    <div class="pricing-grid">
-      <!-- Free Plan -->
-      <div class="pricing-card glass-card">
-        <h3>Free Plan</h3>
-        <div class="price">₹0<span>/month</span></div>
-        <p style="color: var(--text-secondary); font-size: 0.9rem;">Perfect for exploring the platform.</p>
-        <ul class="pricing-features">
-          <li>3 meetings per month</li>
-          <li>Max 30 min audio length</li>
-          <li>Interactive Q&A chat</li>
-          <li style="text-decoration: line-through; opacity: 0.5; color: var(--text-muted);">PDF/DOCX export</li>
-        </ul>
-        <a href="signup.html" class="btn btn-secondary" style="width: 100%;">Sign Up</a>
-      </div>
+    <div class="pricing-card glass-card beta-card">
+      <div class="beta-badge">Beta Plan</div>
+      <h3 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;">Early Access Pass</h3>
+      <div class="price" style="color: #FFF;">$0<span>/forever</span></div>
+      <p style="color: #9CA3AF; font-size: 0.95rem;">Full unlimited access. Help us shape the future of MeetMind.</p>
+      <ul class="pricing-features">
+        <li>Unlimited meetings processing</li>
+        <li>Max 3 hours audio file duration</li>
+        <li>Unlimited AI Q&A queries</li>
+        <li>Full PDF & DOCX exports</li>
+        <li>Beta priority support channels</li>
+      </ul>
+      <a href="signup.html" class="btn btn-primary" style="width: 100%; border-radius: 8px;">Sign Up Free</a>
+    </div>
+  </section>
 
-      <!-- Pro Plan -->
-      <div class="pricing-card glass-card premium">
-        <h3 style="color: var(--accent-primary);">Pro Plan</h3>
-        <div class="price">₹499<span>/month</span></div>
-        <p style="color: var(--text-secondary); font-size: 0.9rem;">For power users and teams.</p>
-        <ul class="pricing-features">
-          <li>Unlimited meetings</li>
-          <li>Max 3 hours audio length</li>
-          <li>Interactive Q&A chat</li>
-          <li>Export MOM as PDF & DOCX</li>
-        </ul>
-        <a href="signup.html" class="btn btn-primary" style="width: 100%;">Get Started Pro</a>
+  <!-- Stats Bar Section -->
+  <section class="stats-bar-section">
+    <div class="stats-bar-container">
+      <div class="stat-item">
+        <div class="stat-value" id="stat-users-bar">150+</div>
+        <div class="stat-label">Active Users</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" id="stat-meetings-bar">420+</div>
+        <div class="stat-label">Meetings Processed</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">99.2%</div>
+        <div class="stat-label">Transcription Accuracy</div>
       </div>
     </div>
   </section>
+
+  <!-- Footer Section -->
+  <footer>
+    <div class="footer-logo">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+      Meet<span>Mind</span>
+    </div>
+    <p>© 2026 MeetMind. Built with ❤️ for productive teams. Currently in Free Beta.</p>
+  </footer>
 
   <script src="js/auth.js"></script>
   <script>
     // Safe routing check: if user session fallback exists, show 'Dashboard' link securely
-    const user = getLoggedInUser();
-    if (user) {
+    const loggedInUser = getLoggedInUser();
+    if (loggedInUser) {
       const navActions = document.getElementById('nav-actions');
       if (navActions) {
         navActions.innerHTML = '';
@@ -115,6 +520,26 @@
         navActions.appendChild(dashboardLink);
       }
     }
+
+    // Load social proof counts from backend stats endpoint
+    async function loadStats() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/v1/stats/public`);
+        if (res.ok) {
+          const data = await res.json();
+          document.getElementById('stat-users-hero').textContent = data.total_users + '+';
+          document.getElementById('stat-meetings-hero').textContent = data.total_meetings + '+';
+          document.getElementById('stat-users-bar').textContent = data.total_users + '+';
+          document.getElementById('stat-meetings-bar').textContent = data.total_meetings + '+';
+        }
+      } catch (err) {
+        console.error('Failed to load stats:', err);
+      }
+    }
+    
+    // Check auth details and load stats on page load
+    checkAuth();
+    loadStats();
   </script>
 </body>
 </html>
