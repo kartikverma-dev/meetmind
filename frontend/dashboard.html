@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' http://localhost:8000 https://meetmind-backend-90u7.onrender.com;">
+  <title>Dashboard — MeetMind</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Dashboard Header -->
+  <header class="dashboard-header">
+    <div class="nav-container">
+      <a href="index.html" class="logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+        Meet<span>Mind</span>
+      </a>
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <span id="user-display" style="font-size: 0.95rem; color: var(--text-secondary);"></span>
+        <button id="logout-btn" class="btn btn-secondary" style="padding: 0.4rem 1rem; font-size: 0.85rem;">Logout</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="dashboard-container">
+    <!-- Upgrade to Pro Banner (Conditional) -->
+    <div id="upgrade-banner" class="upgrade-banner glass-card" style="display: none;">
+      <div>
+        <h3>Upgrade to MeetMind Pro</h3>
+        <p>Unlock unlimited meeting uploads, export MOM files to Word/PDF, and transcribe files up to 3 hours long.</p>
+      </div>
+      <button id="upgrade-btn" class="btn btn-primary">Upgrade for ₹499/mo</button>
+    </div>
+
+    <!-- Upload Card -->
+    <div class="glass-card" style="padding: 2.5rem; margin-bottom: 2rem;">
+      <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem; font-weight: 700;">New Meeting Analysis</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.95rem;">Upload your meeting recording (MP3, MP4, M4A, WAV, WebM) to generate MOM & summaries.</p>
+
+      <div id="upload-alert" class="alert alert-danger"></div>
+
+      <!-- Drag & Drop Zone -->
+      <div id="drop-zone" class="upload-zone">
+        <div class="upload-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+        </div>
+        <h4 style="font-size: 1.1rem; margin-bottom: 0.25rem;">Drag & drop your recording file here</h4>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">or click to select file from your system</p>
+        
+        <input type="file" id="file-input" style="display: none;" accept="audio/*,video/*">
+        
+        <!-- Progress Fill -->
+        <div id="progress-bar" class="upload-progress">
+          <div id="progress-fill" class="upload-progress-fill"></div>
+        </div>
+        <p id="progress-text" class="upload-status-text">Uploading...</p>
+      </div>
+
+      <div class="form-group" style="margin-top: 1.5rem;">
+        <label for="meeting-title">Meeting Title (Optional)</label>
+        <input type="text" id="meeting-title" class="form-control" placeholder="E.g., Product Kickoff - June 2026">
+      </div>
+      
+      <button id="process-btn" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;" disabled>
+        Process Recording
+      </button>
+    </div>
+
+    <!-- Meetings List Grid -->
+    <div>
+      <h3 class="meetings-title">Your Meetings</h3>
+      <div id="empty-state" style="text-align: center; padding: 4rem 1rem; color: var(--text-secondary); display: none;">
+        <p style="font-size: 1.1rem;">You haven't uploaded any meetings yet.</p>
+      </div>
+      <div id="meetings-grid" class="meetings-grid">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Upgrade Modal Placeholder -->
+  <div id="upgrade-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.75); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(8px);">
+    <div class="glass-card" style="max-width: 450px; width: 90%; padding: 2.5rem; text-align: center; position: relative;">
+      <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem;">Unlock Pro Benefits</h3>
+      <p style="color: var(--text-secondary); margin-bottom: 2rem;">Upgrading to Pro gives you unlimited transcripts and full MOM exports.</p>
+      
+      <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-subtle); padding: 1rem; border-radius: var(--radius-sm); margin-bottom: 2rem;">
+        <div style="font-size: 1.75rem; font-weight: 800;">₹499 <span style="font-size: 0.95rem; font-weight: 400; color: var(--text-secondary);">/ month</span></div>
+      </div>
+      
+      <button id="modal-pay-btn" class="btn btn-primary" style="width: 100%; margin-bottom: 0.75rem;">Pay via Razorpay</button>
+      <button id="modal-close-btn" class="btn btn-secondary" style="width: 100%;">Cancel</button>
+    </div>
+  </div>
+
+  <script src="js/auth.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
+</html>

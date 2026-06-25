@@ -12,7 +12,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    anthropic_api_key: str = ""
+    gemini_api_key: str = ""
     supabase_url: str = ""
     supabase_service_key: str = ""
     razorpay_key_id: str = ""
@@ -20,9 +20,12 @@ class Settings(BaseSettings):
     razorpay_webhook_secret: str = ""
     whisper_model: str = "base"
     test_user_id: str = ""
+    frontend_url: str = "https://meetmind-nine.vercel.app"
+    mock_mode: bool = False
+    cron_secret: str = ""
 
-    # Claude model for MOM / summary generation
-    claude_model: str = "claude-sonnet-4-6"
+    # Gemini model for MOM / summary generation
+    gemini_model: str = "gemini-1.5-flash"
 
 
 @lru_cache
