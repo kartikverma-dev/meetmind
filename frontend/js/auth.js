@@ -1,3 +1,15 @@
+const PUBLIC_PAGES = ['index.html', 'login.html', 'signup.html', ''];
+
+function isPublicPage() {
+  const page = window.location.pathname.split('/').pop();
+  return PUBLIC_PAGES.includes(page);
+}
+
+function isAuthPage() {
+  const page = window.location.pathname.split('/').pop();
+  return ['login.html', 'signup.html'].includes(page);
+}
+
 // Global Configurations
 const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? 'http://localhost:8000'
@@ -59,42 +71,40 @@ function getLoggedInUser() {
   return userStr ? JSON.parse(userStr) : null;
 }
 
-// Check route protection using profile endpoint verification
-async function checkAuth() {
-  const currentPath = window.location.pathname;
-  const isAuthPage = currentPath.includes('login.html') || currentPath.includes('signup.html');
-  const isLandingPage = currentPath.endsWith('/') || currentPath.includes('index.html') || currentPath === '';
+// Auth guard — only runs on protected pages
+function requireAuth() {
+  if (isPublicPage()) return; // ← never redirect on public pages
   
-  if (isAuthPage || isLandingPage) {
-    // Check if logged in on public landing page to show dashboard links
-    try {
-      const res = await fetchWithAuth(`${API_BASE_URL}/api/v1/auth/profile`);
-      if (res.ok) {
-        const data = await res.json();
-        localStorage.setItem('meetmind_user', JSON.stringify({ email: data.email }));
-        const userDisplayEl = document.getElementById('user-display');
-        if (userDisplayEl) {
-          userDisplayEl.textContent = data.email;
-        }
-      }
-    } catch (e) {}
+  const token = getCookie("token") || getCookie("access_token") || localStorage.getItem("token") || localStorage.getItem("mock_token") || localStorage.getItem("meetmind_user");
+  if (!token) {
+    window.location.href = "/login.html";
     return;
   }
 
-  try {
-    const res = await fetchWithAuth(`${API_BASE_URL}/api/v1/auth/profile`);
-    if (!res.ok) {
-      window.location.href = 'login.html';
-    } else {
+  // Asynchronously verify session details and populate username on protected pages
+  fetchWithAuth(`${API_BASE_URL}/api/v1/auth/profile`).then(async (res) => {
+    if (res.ok) {
       const data = await res.json();
       localStorage.setItem('meetmind_user', JSON.stringify({ email: data.email }));
       const userDisplayEl = document.getElementById('user-display');
       if (userDisplayEl) {
         userDisplayEl.textContent = data.email;
       }
+    } else {
+      logout();
     }
-  } catch (err) {
-    window.location.href = 'login.html';
+  }).catch(() => {
+    logout();
+  });
+}
+
+// Redirect logged-in users away from login/signup
+function redirectIfLoggedIn() {
+  if (!isAuthPage()) return;
+  
+  const token = getCookie("token") || getCookie("access_token") || localStorage.getItem("token") || localStorage.getItem("mock_token") || localStorage.getItem("meetmind_user");
+  if (token) {
+    window.location.href = "/dashboard.html";
   }
 }
 
@@ -113,10 +123,12 @@ async function logout() {
   window.location.href = 'index.html';
 }
 
-// Initialize Auth Checking & UI displays
+// Run auth redirects immediately to prevent page flash/loop
+requireAuth();
+redirectIfLoggedIn();
+
+// Set up logout button listener on DOM load
 document.addEventListener('DOMContentLoaded', () => {
-  checkAuth();
-  
   const logoutBtn = document.getElementById('logout-btn');
   if (logoutBtn) {
     logoutBtn.addEventListener('click', logout);

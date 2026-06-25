@@ -54,16 +54,7 @@
 
   <script src="js/auth.js"></script>
   <script>
-    // Redirect already authenticated users to dashboard
-    async function redirectIfAuth() {
-      try {
-        const response = await fetchWithAuth(`${API_BASE_URL}/api/v1/auth/profile`);
-        if (response.ok) {
-          window.location.href = 'dashboard.html';
-        }
-      } catch (e) {}
-    }
-    redirectIfAuth();
+
 
     document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
