@@ -159,9 +159,7 @@ class TestMeetMindCore(unittest.TestCase):
         self.assertIn("Signup successful", data["message"])
         self.assertEqual(data["user"]["email"], "test@example.com")
 
-        # Verify profiles insert was triggered
-        mock_db.table.assert_called_with("profiles")
-        mock_db.table().insert.assert_called_once()
+
 
     @patch("routes.auth.get_supabase")
     def test_login_success(self, mock_get_supabase):

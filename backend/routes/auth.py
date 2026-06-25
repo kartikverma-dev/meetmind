@@ -177,34 +177,6 @@ async def signup(request: Request, credentials: UserCredentials):
             )
 
         user_id = auth_resp.user.id
-
-        # Resolve referred_by if referral_code is provided
-        referred_by_id = None
-        if credentials.referral_code:
-            try:
-                referrer_res = supabase.table("profiles").select("id").eq("referral_code", credentials.referral_code).maybe_single().execute()
-                if referrer_res.data:
-                    referred_by_id = referrer_res.data.get("id")
-            except Exception as ref_exc:
-                logger.error("Failed to resolve referral code %s: %s", credentials.referral_code, ref_exc)
-
-        # Insert user profile row
-        try:
-            profile_payload = {
-                "id": user_id,
-                "is_pro": False,
-                "meetings_used": 0,
-            }
-            if referred_by_id:
-                profile_payload["referred_by"] = referred_by_id
-            supabase.table("profiles").insert(profile_payload).execute()
-        except Exception as profile_exc:
-            logger.error("Failed to auto-create profile for user %s: %s", user_id, profile_exc)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to initialize user profile: {profile_exc}",
-            ) from profile_exc
-
         return {
             "message": "Signup successful. Please verify your email to log in.",
             "user": {
