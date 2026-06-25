@@ -395,7 +395,7 @@ async function checkServerHealth() {
   let showBanner = false;
   
   try {
-    const response = await fetch(`${API_BASE_URL}/health`, {
+    const response = await fetch(`${API_BASE_URL}/api/v1/health`, {
       signal: controller.signal
     });
     clearTimeout(timeoutId);
@@ -439,7 +439,7 @@ async function checkServerHealth() {
       
       const pollInterval = setInterval(async () => {
         try {
-          const pollResp = await fetch(`${API_BASE_URL}/health`);
+          const pollResp = await fetch(`${API_BASE_URL}/api/v1/health`);
           if (pollResp.ok) {
             clearInterval(pollInterval);
             const activeBanner = document.getElementById(bannerId);
