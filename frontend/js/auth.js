@@ -23,15 +23,24 @@ function getCookie(name) {
   return null;
 }
 
+// Save Token Helper
+function saveToken(token) {
+  console.log("Token received:", token);
+  console.log("Token type:", typeof token);
+  if (token) {
+    localStorage.setItem("meetmind_token", String(token));
+  }
+}
+
 // Fetch wrapper to handle httpOnly cookies, CSRF tokens, and 401 refresh token flow.
 async function fetchWithAuth(url, options = {}) {
   options.credentials = 'include';
   options.headers = options.headers || {};
   
-  // Inject mock token if present (for mock mode backward compatibility)
-  const mockToken = localStorage.getItem('mock_token');
-  if (mockToken) {
-    options.headers['Authorization'] = `Bearer ${mockToken}`;
+  // Inject meetmind_token if present
+  const token = localStorage.getItem('meetmind_token');
+  if (token) {
+    options.headers['Authorization'] = `Bearer ${token}`;
   }
 
   // Inject CSRF token on state-changing requests
@@ -73,9 +82,14 @@ function getLoggedInUser() {
 
 // Auth guard — only runs on protected pages
 function requireAuth() {
-  if (isPublicPage()) return; // ← never redirect on public pages
+  const page = window.location.pathname.split('/').pop();
+  const publicPages = ['index.html', 'login.html', 'signup.html', ''];
+  if (publicPages.includes(page)) return;
   
-  const token = getCookie("token") || getCookie("access_token") || localStorage.getItem("token") || localStorage.getItem("mock_token") || localStorage.getItem("meetmind_user");
+  console.log("Token on dashboard:", localStorage.getItem("meetmind_token"));
+  
+  const token = localStorage.getItem("meetmind_token");
+  console.log("Auth check - token:", token ? "exists" : "missing");
   if (!token) {
     window.location.href = "/login.html";
     return;
@@ -102,7 +116,7 @@ function requireAuth() {
 function redirectIfLoggedIn() {
   if (!isAuthPage()) return;
   
-  const token = getCookie("token") || getCookie("access_token") || localStorage.getItem("token") || localStorage.getItem("mock_token") || localStorage.getItem("meetmind_user");
+  const token = localStorage.getItem("meetmind_token");
   if (token) {
     window.location.href = "/dashboard.html";
   }
@@ -118,6 +132,7 @@ async function logout() {
   } catch (e) {
     console.error('Logout request failed:', e);
   }
+  localStorage.removeItem('meetmind_token');
   localStorage.removeItem('mock_token');
   localStorage.removeItem('meetmind_user');
   window.location.href = 'index.html';

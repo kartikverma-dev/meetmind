@@ -83,10 +83,14 @@
           throw new Error(data.detail || 'Login failed. Please check your credentials.');
         }
         
-        // Save user metadata details safely (access token cookie is HTTPOnly and set by response)
+        // Save user metadata details safely
         localStorage.setItem('meetmind_user', JSON.stringify(data.user));
         
-        window.location.href = 'dashboard.html';
+        // Save token to localStorage
+        const token = data.access_token;
+        saveToken(token);
+        console.log("Saved token, redirecting to dashboard");
+        window.location.href = "/dashboard.html";        // then redirect
       } catch (err) {
         errorAlert.textContent = err.message;
         errorAlert.style.display = 'block';

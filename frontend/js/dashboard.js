@@ -462,6 +462,7 @@ if (logoutBtn) {
 }
 
 function logout() {
+  localStorage.removeItem('meetmind_token');
   localStorage.removeItem('meetmind_user');
   localStorage.removeItem('meetmind_is_pro');
   // Clear mock token too
