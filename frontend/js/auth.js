@@ -1,4 +1,4 @@
-const PUBLIC_PAGES = ['index.html', 'login.html', 'signup.html', ''];
+const PUBLIC_PAGES = ['index.html', 'login.html', 'signup.html', 'share.html', ''];
 
 function isPublicPage() {
   const page = window.location.pathname.split('/').pop();
@@ -83,7 +83,7 @@ function getLoggedInUser() {
 // Auth guard — only runs on protected pages
 function requireAuth() {
   const page = window.location.pathname.split('/').pop();
-  const publicPages = ['index.html', 'login.html', 'signup.html', ''];
+  const publicPages = ['index.html', 'login.html', 'signup.html', 'share.html', ''];
   if (publicPages.includes(page)) return;
   
   console.log("Token on dashboard:", localStorage.getItem("meetmind_token"));

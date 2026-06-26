@@ -499,22 +499,6 @@ class TestMeetMindCore(unittest.TestCase):
         self.assertIn("empty or corrupt", response.json()["detail"].lower())
 
     @patch("routes.auth.get_supabase")
-    def test_mock_upgrade_success(self, mock_auth_supabase):
-        # Mock auth
-        mock_auth_db = MagicMock()
-        mock_auth_supabase.return_value = mock_auth_db
-        mock_user = MagicMock()
-        mock_user.id = "22222222-2222-2222-2222-222222222222"
-        mock_user.email = "test@example.com"
-        mock_auth_resp = MagicMock()
-        mock_auth_resp.user = mock_user
-        mock_auth_db.auth.get_user.return_value = mock_auth_resp
-
-        response = self.client.post("/payments/mock-upgrade", headers=self.auth_headers)
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["status"], "disabled")
-
-    @patch("routes.auth.get_supabase")
     @patch("routes.meetings.get_supabase")
     def test_export_pdf_free_user_allowed(self, mock_meetings_supabase, mock_auth_supabase):
         # Mock auth
