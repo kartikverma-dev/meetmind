@@ -101,3 +101,42 @@ DROP TRIGGER IF EXISTS meetings_updated_at ON meetings;
 CREATE TRIGGER meetings_updated_at
   BEFORE UPDATE ON meetings
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- MeetMind v2.0 Additions
+
+-- 1. Update meetings table
+ALTER TABLE meetings ADD COLUMN IF NOT EXISTS is_public BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE meetings ADD COLUMN IF NOT EXISTS public_slug TEXT UNIQUE;
+ALTER TABLE meetings ADD COLUMN IF NOT EXISTS duration INTEGER DEFAULT 0;
+
+CREATE INDEX IF NOT EXISTS idx_meetings_public_slug ON meetings(public_slug);
+
+-- 2. Create action_items table
+CREATE TABLE IF NOT EXISTS action_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    meeting_id UUID NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    task TEXT NOT NULL,
+    owner TEXT,
+    deadline TEXT,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'done')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_action_items_meeting_id ON action_items(meeting_id);
+CREATE INDEX IF NOT EXISTS idx_action_items_user_id ON action_items(user_id);
+CREATE INDEX IF NOT EXISTS idx_action_items_status ON action_items(status);
+
+DROP TRIGGER IF EXISTS action_items_updated_at ON action_items;
+CREATE TRIGGER action_items_updated_at
+  BEFORE UPDATE ON action_items
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- Enable RLS for action items
+ALTER TABLE action_items ENABLE ROW LEVEL SECURITY;
+
+-- 3. GIN Full-Text / Similarity Index on transcript
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE INDEX IF NOT EXISTS idx_meetings_transcript_trgm ON meetings USING gin (transcript gin_trgm_ops);
+

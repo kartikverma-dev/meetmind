@@ -13,7 +13,8 @@ from config import get_settings
 from routes.meetings import router as meetings_router
 from routes.auth import router as auth_router
 from routes.qa import router as qa_router
-from routes.payments import router as payments_router
+from routes.action_items import router as action_items_router
+from routes.share import router as share_router
 from routes.cron import router as cron_router
 from routes.stats import router as stats_router
 from utils.limiter import limiter
@@ -91,7 +92,8 @@ app.add_middleware(RequestLoggingMiddleware)
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(meetings_router, prefix="/api/v1")
 app.include_router(qa_router, prefix="/api/v1")
-app.include_router(payments_router, prefix="/api/v1")
+app.include_router(action_items_router, prefix="/api/v1")
+app.include_router(share_router, prefix="/api/v1")
 app.include_router(cron_router, prefix="/api/v1")
 app.include_router(stats_router, prefix="/api/v1")
 

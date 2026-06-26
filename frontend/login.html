@@ -6,11 +6,22 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' http://localhost:8000 https://meetmind-backend-90u7.onrender.com;">
   <title>Login — MeetMind</title>
   <link rel="stylesheet" href="css/style.css">
+  <style>
+    .auth-wrapper {
+      position: relative;
+      z-index: 10;
+    }
+  </style>
 </head>
 <body>
 
-  <header>
-    <div class="nav-container">
+  <!-- Ambient background orbs -->
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+
+  <!-- Navigation -->
+  <header style="background: rgba(8, 8, 16, 0.7); backdrop-filter: blur(20px); border-bottom: 1px solid var(--glass-border); position: relative; z-index: 100;">
+    <div class="nav-container" style="display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 5%;">
       <a href="index.html" class="logo">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
         Meet<span>Mind</span>
@@ -20,8 +31,8 @@
 
   <div class="auth-wrapper">
     <div class="auth-card glass-card">
-      <div style="background: rgba(79, 142, 247, 0.1); border: 1px solid rgba(79, 142, 247, 0.25); color: #4F8EF7; padding: 0.75rem 1rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem; font-size: 0.85rem; font-weight: 500; text-align: center;">
-        🚀 <strong>Free Beta Active:</strong> All limits are disabled. Sign up or log in to get full access instantly.
+      <div style="background: var(--accent-soft); border: 1px solid var(--glass-border); color: var(--accent); padding: 0.75rem 1rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem; font-size: 0.85rem; font-weight: 500; text-align: center;">
+        🚀 <strong>Free & Open Access:</strong> Log in to access your dashboard and summaries.
       </div>
 
       <h2>Welcome Back</h2>
@@ -54,8 +65,6 @@
 
   <script src="js/auth.js"></script>
   <script>
-
-
     document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       
@@ -83,14 +92,9 @@
           throw new Error(data.detail || 'Login failed. Please check your credentials.');
         }
         
-        // Save user metadata details safely
         localStorage.setItem('meetmind_user', JSON.stringify(data.user));
-        
-        // Save token to localStorage
-        const token = data.access_token;
-        saveToken(token);
-        console.log("Saved token, redirecting to dashboard");
-        window.location.href = "/dashboard.html";        // then redirect
+        saveToken(data.access_token);
+        window.location.href = "dashboard.html";
       } catch (err) {
         errorAlert.textContent = err.message;
         errorAlert.style.display = 'block';
@@ -98,16 +102,6 @@
         submitBtn.textContent = 'Sign In';
       }
     });
-
-    // Hacker console warning
-    console.log(
-      "%cSTOP!",
-      "color: red; font-size: 30px; font-weight: bold; -webkit-text-stroke: 1px black;"
-    );
-    console.log(
-      "%cThis is a browser feature intended for developers. Attempting to inject code or execute unauthorized actions here will trigger security logging.",
-      "color: gray; font-size: 14px;"
-    );
   </script>
 </body>
 </html>

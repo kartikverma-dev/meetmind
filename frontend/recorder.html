@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' http://localhost:8000 https://meetmind-backend-90u7.onrender.com;">
+  <title>Record Meeting — MeetMind</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .recorder-container {
+      position: relative;
+      z-index: 10;
+      max-width: 750px;
+      margin: 2.5rem auto;
+      padding: 0 1.5rem;
+    }
+
+    .source-selector {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .source-btn {
+      padding: 1.25rem 1rem;
+      text-align: center;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 600;
+      border: 1px solid var(--glass-border);
+      background: var(--glass-bg);
+      border-radius: var(--radius-md);
+      transition: var(--transition);
+    }
+
+    .source-btn:hover {
+      background: var(--glass-bg-hover);
+      border-color: var(--glass-border-hover);
+    }
+
+    .source-btn.active {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: white;
+      box-shadow: var(--accent-glow);
+    }
+
+    .source-btn .icon {
+      font-size: 2rem;
+    }
+
+    .audio-config-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 2.5rem;
+    }
+
+    @media (max-width: 600px) {
+      .audio-config-grid {
+        grid-template-columns: 1fr;
+      }
+      .source-selector {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .config-card {
+      padding: 1.5rem;
+      border-radius: var(--radius-md);
+    }
+
+    .visualizer-container {
+      width: 100%;
+      height: 100px;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-md);
+      margin-bottom: 2rem;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .visualizer-canvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .record-controls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      padding: 2rem;
+    }
+
+    .record-btn-main {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      background: #EF4444;
+      border: 6px solid rgba(255,255,255,0.1);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition);
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+    }
+
+    .record-btn-main:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 30px rgba(239, 68, 68, 0.6);
+    }
+
+    .record-btn-main.recording {
+      border-radius: var(--radius-md);
+      width: 80px;
+      height: 80px;
+      background: white;
+      animation: pulseRecord 1.5s infinite;
+    }
+
+    @keyframes pulseRecord {
+      0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+      70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+
+    .timer-text {
+      font-size: 2.5rem;
+      font-weight: 700;
+      font-family: var(--font-secondary);
+      letter-spacing: 1px;
+    }
+
+    .review-pane {
+      display: none;
+      padding: 2rem;
+    }
+
+    .waveform-visualizer {
+      height: 60px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      margin: 1.5rem 0;
+      position: relative;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Ambient background orbs -->
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+
+  <!-- Toast system -->
+  <div id="toast" class="toast"></div>
+
+  <!-- Header -->
+  <header style="background: rgba(8, 8, 16, 0.7); backdrop-filter: blur(20px); border-bottom: 1px solid var(--glass-border); position: relative; z-index: 100;">
+    <div class="nav-container" style="display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 5%;">
+      <a href="dashboard.html" class="logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+        Meet<span>Mind</span>
+      </a>
+      <div style="display: flex; gap: 1rem; align-items: center;">
+        <a href="dashboard.html" class="btn btn-secondary" style="padding: 0.5rem 1.25rem;">← Dashboard</a>
+        <span id="user-display" style="font-size: 0.9rem; color: var(--text-secondary); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
+      </div>
+    </div>
+  </header>
+
+  <div class="recorder-container">
+    <!-- Card wrapper -->
+    <div class="glass-card" style="overflow: hidden; padding: 2.5rem;">
+      <h2 style="font-size: 1.75rem; font-weight: 800; margin-bottom: 0.5rem; text-align: center;">In-Browser Meeting Recorder</h2>
+      <p style="color: var(--text-secondary); text-align: center; margin-bottom: 2.5rem; font-size: 0.95rem;">Capture your screen, browser tabs, or application audio along with microphone input.</p>
+
+      <!-- Step 1: Recording Configuration Panel -->
+      <div id="setup-pane">
+        <!-- Source selector -->
+        <label style="display: block; font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.75rem; font-weight: 600;">SELECT RECORDING SOURCE</label>
+        <div class="source-selector">
+          <div class="source-btn active" data-source="screen">
+            <span class="icon">🖥️</span>
+            <span>Full Screen</span>
+          </div>
+          <div class="source-btn" data-source="window">
+            <span class="icon">🪟</span>
+            <span>Window</span>
+          </div>
+          <div class="source-btn" data-source="tab">
+            <span class="icon">📑</span>
+            <span>Browser Tab</span>
+          </div>
+        </div>
+
+        <!-- Audio Configuration grid -->
+        <div class="audio-config-grid">
+          <!-- Mic card -->
+          <div class="glass-card config-card" style="background: rgba(255,255,255,0.01);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+              <span style="font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">🎙️ Microphone Input</span>
+              <input type="checkbox" id="mic-toggle" checked style="width: 18px; height: 18px; cursor: pointer;">
+            </div>
+            <label for="mic-select" style="font-size: 0.8rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Microphone Device</label>
+            <select id="mic-select" class="form-control" style="padding: 0.5rem; font-size: 0.85rem;"></select>
+          </div>
+
+          <!-- System Audio card -->
+          <div class="glass-card config-card" style="background: rgba(255,255,255,0.01);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+              <span style="font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">🔊 System Audio</span>
+              <input type="checkbox" id="system-audio-toggle" checked style="width: 18px; height: 18px; cursor: pointer;">
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.4;">Captures system audio or browser audio when capturing screen/tab. Enabled by default.</p>
+          </div>
+        </div>
+
+        <!-- Start button -->
+        <button id="start-session-btn" class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1.1rem; border-radius: var(--radius-md);">
+          Initialize Recording Session
+        </button>
+      </div>
+
+      <!-- Step 2: Active Recording Session Pane -->
+      <div id="recording-pane" style="display: none; text-align: center;">
+        <div class="timer-text" id="timer">00:00</div>
+        
+        <div style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 2rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+          <span style="color: #EF4444; animation: pulseRecord 1.5s infinite;">●</span> <span id="status-text">Capturing...</span>
+        </div>
+
+        <div class="visualizer-container">
+          <canvas class="visualizer-canvas" id="canvas"></canvas>
+        </div>
+
+        <div style="display: flex; gap: 1rem; justify-content: center;">
+          <button id="pause-btn" class="btn btn-secondary" style="padding: 0.75rem 1.5rem;">Pause</button>
+          <button id="stop-btn" class="btn btn-danger" style="padding: 0.75rem 2rem;">Stop & Review</button>
+        </div>
+
+        <!-- Live transcript preview -->
+        <div style="margin-top: 2rem; text-align: left;">
+          <label style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600; display: block; margin-bottom: 0.5rem;">LIVE TRANSCRIPTION PREVIEW</label>
+          <div id="live-transcription-box" style="background: rgba(0,0,0,0.25); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); padding: 1rem; height: 100px; overflow-y: auto; font-family: var(--font-secondary); font-size: 0.85rem; color: var(--text-secondary);">
+            Speech-to-text preview will appear here as you speak...
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Review & Upload Session Pane -->
+      <div id="review-pane" class="review-pane">
+        <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1.5rem; text-align: center;">Review Recording</h3>
+        
+        <div style="display: flex; justify-content: center; margin-bottom: 2rem;">
+          <audio id="audio-player" controls style="width: 100%; border-radius: var(--radius-sm);"></audio>
+        </div>
+
+        <div class="form-group">
+          <label for="meeting-title">Meeting Title</label>
+          <input type="text" id="meeting-title" class="form-control" placeholder="E.g., Product Roadmap Align" required>
+        </div>
+
+        <div class="form-group">
+          <label for="language-select">Transcription Language</label>
+          <select id="language-select" class="form-control">
+            <option value="auto">Auto-Detect Language</option>
+            <option value="en">English</option>
+            <option value="hi">Hindi (हिंदी)</option>
+            <option value="ta">Tamil (தமிழ்)</option>
+            <option value="te">Telugu (తెలుగు)</option>
+            <option value="bn">Bengali (বাংলা)</option>
+            <option value="mr">Marathi (मराठी)</option>
+            <option value="fr">French (Français)</option>
+            <option value="de">German (Deutsch)</option>
+            <option value="pt">Portuguese (Português)</option>
+            <option value="es">Spanish (Español)</option>
+          </select>
+        </div>
+
+        <div id="upload-progress-container" style="display: none; margin: 1.5rem 0;">
+          <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.5rem; color: var(--text-secondary);">
+            <span>Uploading recording...</span>
+            <span id="upload-percent">0%</span>
+          </div>
+          <div class="upload-progress" style="display: block; max-width: 100%;">
+            <div class="upload-progress-fill" id="upload-progress-bar" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <button id="upload-btn" class="btn btn-primary" style="width: 100%; padding: 1rem; border-radius: var(--radius-md);">
+          Process with AI
+        </button>
+
+        <div style="text-align: center; margin-top: 1.5rem;">
+          <a href="#" id="discard-btn" style="color: var(--error); font-size: 0.9rem; font-weight: 500;">Discard Recording</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="js/shortcuts.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/recorder.js"></script>
+</body>
+</html>

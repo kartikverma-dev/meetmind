@@ -6,206 +6,359 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' http://localhost:8000 https://meetmind-backend-90u7.onrender.com;">
   <title>Meeting Analysis — MeetMind</title>
   <link rel="stylesheet" href="css/style.css">
+  <style>
+    .meeting-detail-wrapper {
+      position: relative;
+      z-index: 10;
+      max-width: 1000px;
+      margin: 2.5rem auto;
+      padding: 0 1.5rem;
+    }
+
+    .meeting-header-card {
+      padding: 2.5rem;
+      margin-bottom: 2rem;
+      position: relative;
+    }
+
+    .header-top-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .edit-title-btn {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      transition: var(--transition);
+    }
+
+    .edit-title-btn:hover {
+      color: white;
+    }
+
+    .share-btn-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Tabs Styling */
+    .tabs-wrapper {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--glass-border);
+      padding-bottom: 0.5rem;
+    }
+
+    .tab-trigger {
+      padding: 0.75rem 1.5rem;
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      border-radius: var(--radius-sm);
+    }
+
+    .tab-trigger:hover {
+      color: white;
+      background: var(--glass-bg);
+    }
+
+    .tab-trigger.active {
+      color: white;
+      background: var(--accent-soft);
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--accent-glow);
+    }
+
+    .tab-content-panel {
+      display: none;
+    }
+
+    .tab-content-panel.active {
+      display: block;
+    }
+
+    /* Summary Card Grid */
+    .summary-cards-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .summary-point-card {
+      padding: 1.5rem;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+      transition: var(--transition);
+    }
+
+    .summary-point-card:hover {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255,255,255,0.15);
+      transform: translateY(-2px);
+    }
+
+    .summary-point-icon {
+      font-size: 1.25rem;
+      color: var(--accent);
+      background: var(--accent-soft);
+      padding: 0.5rem;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Modal Overlay styling */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(12px);
+    }
+
+    .share-row {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .social-share-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+  </style>
 </head>
 <body>
 
-  <!-- Dashboard Header -->
-  <header class="dashboard-header">
-    <div class="nav-container">
-      <a href="index.html" class="logo">
+  <!-- Ambient background orbs -->
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+
+  <!-- Toast system -->
+  <div id="toast" class="toast"></div>
+
+  <!-- Header -->
+  <header style="background: rgba(8, 8, 16, 0.7); backdrop-filter: blur(20px); border-bottom: 1px solid var(--glass-border); position: relative; z-index: 100;">
+    <div class="nav-container" style="display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 5%;">
+      <a href="dashboard.html" class="logo">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
         Meet<span>Mind</span>
       </a>
-      <div style="display: flex; align-items: center; gap: 1rem;">
-        <span id="user-display" style="font-size: 0.95rem; color: var(--text-secondary);"></span>
-        <a href="dashboard.html" class="btn btn-secondary" style="padding: 0.4rem 1rem; font-size: 0.85rem;">Dashboard</a>
+      <div style="display: flex; gap: 1rem; align-items: center;">
+        <a href="dashboard.html" class="btn btn-secondary" style="padding: 0.5rem 1.25rem;">← Dashboard</a>
+        <span id="user-display" style="font-size: 0.9rem; color: var(--text-secondary); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
       </div>
     </div>
   </header>
 
   <div class="meeting-detail-wrapper">
-    <!-- Back to Dashboard -->
-    <a href="dashboard.html" class="back-link">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-      Back to Dashboard
-    </a>
-
-    <!-- Meeting Title Header -->
-    <div class="meeting-header">
-      <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
-        <span id="meeting-date" style="font-size: 0.95rem; color: var(--text-secondary);">June 25, 2026</span>
-        <span id="meeting-status-badge" class="badge">Processing</span>
+    <!-- Meeting Title Header Card -->
+    <div class="glass-card meeting-header-card">
+      <div class="header-top-meta">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <span id="meeting-date" style="font-size: 0.9rem; color: var(--text-secondary);"></span>
+          <span id="meeting-status-badge" class="badge">Processing</span>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn btn-secondary share-btn-header" onclick="openShareModal()">
+            <span>🔗</span> Share
+          </button>
+        </div>
       </div>
-      <h2 id="meeting-title">Loading Meeting Details...</h2>
+
+      <!-- Editable Title Area -->
+      <div id="title-display-container" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+        <h2 id="meeting-title" style="font-size: 2rem; font-weight: 800; margin: 0; flex-grow: 1;">Loading meeting...</h2>
+        <button class="edit-title-btn" onclick="toggleEditTitle(true)">✏️ Rename</button>
+      </div>
+
+      <div id="title-edit-container" style="display: none; align-items: center; gap: 1rem; width: 100%;">
+        <input type="text" id="meeting-title-input" class="form-control" style="font-size: 1.5rem; padding: 0.5rem 1rem; flex-grow: 1;">
+        <button class="btn btn-primary" onclick="saveMeetingTitle()">Save</button>
+        <button class="btn btn-secondary" onclick="toggleEditTitle(false)">Cancel</button>
+      </div>
     </div>
 
-    <!-- Processing Steps Panel -->
-    <div id="processing-steps-panel" class="glass-card" style="display: none; padding: 2rem; margin-bottom: 1.5rem;">
+    <!-- Processing Progress Panel -->
+    <div id="processing-steps-panel" class="glass-card" style="display: none; padding: 2rem; margin-bottom: 2rem;">
       <h3 style="margin-top: 0; margin-bottom: 1.5rem; font-size: 1.2rem; display: flex; align-items: center; gap: 0.5rem; color: var(--text-primary);">
-        <span class="spinner" style="width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.1); border-top-color: var(--accent-primary); border-radius: 50%; display: inline-block; animation: spin 1s linear infinite;"></span>
-        Analyzing Meeting Content
+        <span class="spinner" style="width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.1); border-top-color: var(--accent); border-radius: 50%; display: inline-block; animation: spin 1s linear infinite;"></span>
+        Synthesizing Meeting Content
       </h3>
-      <div class="steps-progress-bar" style="display: flex; flex-direction: column; gap: 1rem;">
-        <!-- Step 1 -->
-        <div id="step-1" class="progress-step" style="display: flex; align-items: center; gap: 0.75rem;">
-          <div class="step-icon" style="width: 24px; height: 24px; border-radius: 50%; background: var(--accent-success); color: white; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold;">✓</div>
-          <span style="font-weight: 500;">Step 1: Uploading</span>
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div id="step-1" style="display: flex; align-items: center; gap: 0.75rem;">
+          <div style="width: 24px; height: 24px; border-radius: 50%; background: #10B981; color: white; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold;">✓</div>
+          <span style="font-weight: 500;">Step 1: Upload Complete</span>
         </div>
-        <!-- Step 2 -->
-        <div id="step-2" class="progress-step" style="display: flex; align-items: center; gap: 0.75rem;">
-          <div class="step-icon" id="step-2-icon" style="width: 24px; height: 24px; border-radius: 50%; background: var(--text-secondary); color: white; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold;">2</div>
-          <span id="step-2-text" style="font-weight: 500;">Step 2: Transcribing Audio</span>
+        <div id="step-2" style="display: flex; align-items: center; gap: 0.75rem;">
+          <div id="step-2-icon" style="width: 24px; height: 24px; border-radius: 50%; background: var(--glass-border); color: white; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold;">2</div>
+          <span id="step-2-text" style="font-weight: 500; opacity: 0.5;">Step 2: Transcribing Audio with Whisper AI</span>
         </div>
-        <!-- Step 3 -->
-        <div id="step-3" class="progress-step" style="display: flex; align-items: center; gap: 0.75rem;">
-          <div class="step-icon" id="step-3-icon" style="width: 24px; height: 24px; border-radius: 50%; background: var(--text-secondary); color: white; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold;">3</div>
-          <span id="step-3-text" style="font-weight: 500;">Step 3: Generating MOM & Summary</span>
-        </div>
-        <!-- Step 4 -->
-        <div id="step-4" class="progress-step" style="display: flex; align-items: center; gap: 0.75rem;">
-          <div class="step-icon" id="step-4-icon" style="width: 24px; height: 24px; border-radius: 50%; background: var(--text-secondary); color: white; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold;">4</div>
-          <span id="step-4-text" style="font-weight: 500;">Step 4: Done</span>
+        <div id="step-3" style="display: flex; align-items: center; gap: 0.75rem;">
+          <div id="step-3-icon" style="width: 24px; height: 24px; border-radius: 50%; background: var(--glass-border); color: white; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold;">3</div>
+          <span id="step-3-text" style="font-weight: 500; opacity: 0.5;">Step 3: Generating MOM & Summary cards via Gemini AI</span>
         </div>
       </div>
     </div>
 
-    <!-- Error state -->
-    <div id="detail-error" class="alert alert-danger"></div>
+    <!-- Error container -->
+    <div id="detail-error" class="alert alert-danger" style="display: none; margin-bottom: 2rem;"></div>
 
+    <!-- Meeting Main Content Panel -->
     <div id="meeting-content-pane" style="display: none;">
       <!-- Tab selectors -->
-      <div class="tabs-container">
-        <button class="tab-btn active" onclick="switchTab('summary')">Executive Summary</button>
-        <button class="tab-btn" onclick="switchTab('mom')">MOM</button>
-        <button class="tab-btn" onclick="switchTab('qa')">Ask a Question</button>
+      <div class="tabs-wrapper">
+        <button class="tab-trigger active" onclick="switchTab('summary')">Executive Summary</button>
+        <button class="tab-trigger" onclick="switchTab('mom')">MOM Document</button>
+        <button class="tab-trigger" onclick="switchTab('chat')">Ask AI Chatbot</button>
       </div>
 
-      <!-- Tab: Executive Summary -->
-      <div id="tab-summary" class="tab-panel active glass-card" style="padding: 2rem;">
-        <h3 style="margin-bottom: 1.5rem; font-size: 1.25rem;">Key Executive Bullet Points</h3>
-        <ul id="summary-points-list" class="bullet-list">
+      <!-- Tab 1: Executive Summary -->
+      <div id="tab-summary" class="tab-content-panel active">
+        <div class="summary-cards-grid" id="summary-points-list">
           <!-- Populated dynamically -->
-        </ul>
-      </div>
-
-      <!-- Tab: MOM -->
-      <div id="tab-mom" class="tab-panel glass-card" style="padding: 2.5rem;">
-        <!-- Attendees -->
-        <div class="mom-section">
-          <h3>Attendees</h3>
-          <div id="mom-attendees-list" class="mom-pill-list">
-            <!-- Populated dynamically -->
-          </div>
-        </div>
-
-        <!-- Agenda -->
-        <div class="mom-section">
-          <h3>Agenda</h3>
-          <ul id="mom-agenda-list" class="bullet-list" style="font-family: var(--font-secondary); font-size: 0.95rem;">
-            <!-- Populated dynamically -->
-          </ul>
-        </div>
-
-        <!-- Decisions -->
-        <div class="mom-section">
-          <h3>Key Decisions</h3>
-          <ul id="mom-decisions-list" class="bullet-list" style="font-family: var(--font-secondary); font-size: 0.95rem;">
-            <!-- Populated dynamically -->
-          </ul>
-        </div>
-
-        <!-- Action Items Table -->
-        <div class="mom-section" style="margin-bottom: 0;">
-          <h3>Action Items</h3>
-          <div style="overflow-x: auto;">
-            <table class="mom-table">
-              <thead>
-                <tr>
-                  <th>Action Item / Task</th>
-                  <th>Owner</th>
-                  <th>Deadline</th>
-                </tr>
-              </thead>
-              <tbody id="mom-actions-table-body">
-                <!-- Populated dynamically -->
-              </tbody>
-            </table>
-          </div>
         </div>
       </div>
 
-      <!-- Tab: Q&A Chat -->
-      <div id="tab-qa" class="tab-panel">
+      <!-- Tab 2: MOM Document -->
+      <div id="tab-mom" class="tab-content-panel">
+        <div class="glass-card" style="padding: 2.5rem; display: flex; flex-direction: column; gap: 2.5rem;">
+          <!-- Attendees -->
+          <div>
+            <h4 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.75rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem; color: var(--accent);">👥 ATTENDEES</h4>
+            <div id="mom-attendees-list" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+
+          <!-- Agenda -->
+          <div>
+            <h4 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.75rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem; color: var(--accent);">🎯 MEETING AGENDA</h4>
+            <ul id="mom-agenda-list" class="bullet-list" style="margin-left: 1.5rem;">
+              <!-- Populated dynamically -->
+            </ul>
+          </div>
+
+          <!-- Decisions -->
+          <div>
+            <h4 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.75rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem; color: var(--accent);">💡 DECISIONS MADE</h4>
+            <ul id="mom-decisions-list" class="bullet-list" style="margin-left: 1.5rem;">
+              <!-- Populated dynamically -->
+            </ul>
+          </div>
+
+          <!-- Action Items Table -->
+          <div>
+            <h4 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem; color: var(--accent);">✅ INTERACTIVE ACTION ITEMS</h4>
+            <div style="overflow-x: auto;">
+              <table class="mom-table">
+                <thead>
+                  <tr>
+                    <th style="width: 50px;">Done</th>
+                    <th>Task Description</th>
+                    <th>Assignee</th>
+                    <th>Deadline</th>
+                  </tr>
+                </thead>
+                <tbody id="mom-actions-table-body">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 3: Q&A Chat -->
+      <div id="tab-chat" class="tab-content-panel">
         <div class="chat-container">
           <div id="chat-messages" class="chat-messages">
             <div class="chat-bubble assistant">
-              Hello! I've analyzed this meeting's transcript. Ask me any question about the topics, decisions, or action items discussed.
+              Hello! I have completed analyzing this meeting. Feel free to ask me any question about the topics, decisions, or assignments discussed.
             </div>
-            <!-- Dynamic chats -->
           </div>
-          
           <form id="chat-form" class="chat-input-bar">
-            <input type="text" id="chat-input" class="chat-input" placeholder="E.g., What did Alice agree to do?" autocomplete="off" required>
-            <button type="submit" id="chat-send-btn" class="btn btn-primary" style="padding: 0.75rem 1.25rem;">Send</button>
+            <input type="text" id="chat-input" class="chat-input" placeholder="Ask AI a question about this meeting..." autocomplete="off" required>
+            <button type="submit" id="chat-send-btn" class="btn btn-primary" style="padding: 0.75rem 1.5rem;">Send</button>
           </form>
         </div>
       </div>
 
       <!-- Export Panel -->
-      <div class="export-panel glass-card">
+      <div class="glass-card" style="padding: 2rem; margin-top: 2.5rem; display: flex; justify-content: space-between; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
         <div>
-          <h4 style="font-weight: 700; font-size: 1rem;">Export Meeting Minutes</h4>
-          <p style="color: var(--text-secondary); font-size: 0.85rem;">Download the MOM as a professional PDF or Microsoft Word Document.</p>
+          <h4 style="font-weight: 700; font-size: 1.1rem;">Export Synthesis Report</h4>
+          <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.25rem;">Download these generated details as PDF or Microsoft Word file.</p>
         </div>
-        <div class="export-buttons">
-          <button id="export-pdf-btn" class="btn btn-secondary" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
-            Export PDF
-          </button>
-          <button id="export-docx-btn" class="btn btn-secondary" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
-            Export DOCX
-          </button>
+        <div style="display: flex; gap: 1rem;">
+          <button id="export-pdf-btn" class="btn btn-secondary" style="padding: 0.6rem 1.25rem; font-size: 0.9rem;">Export PDF</button>
+          <button id="export-docx-btn" class="btn btn-secondary" style="padding: 0.6rem 1.25rem; font-size: 0.9rem;">Export DOCX</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Floating Feedback Widget -->
-  <button id="feedback-widget-btn" style="position: fixed; bottom: 2rem; right: 2rem; z-index: 1000; background: linear-gradient(135deg, #4F8EF7, #8B5CF6); color: #FFF; border: none; padding: 0.75rem 1.25rem; border-radius: 50px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 20px rgba(79, 142, 247, 0.4); transition: transform 0.2s ease;">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-    Feedback
-  </button>
+  <!-- Share Modal -->
+  <div id="share-modal" class="modal-overlay" onclick="closeShareModal()">
+    <div class="glass-card glass-modal" style="max-width: 500px; width: 90%; padding: 2.5rem;" onclick="event.stopPropagation()">
+      <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem; font-weight: 800;">Share Meeting Summary</h3>
+      <p style="color: var(--text-secondary); margin-bottom: 2rem; font-size: 0.9rem;">Toggle public link availability and share summary details instantly.</p>
 
-  <!-- Feedback Modal -->
-  <div id="feedback-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.75); z-index: 1001; align-items: center; justify-content: center; backdrop-filter: blur(8px);">
-    <div class="glass-card" style="max-width: 450px; width: 90%; padding: 2.5rem; position: relative;">
-      <button id="close-feedback-modal" style="background: none; border: none; font-size: 1.5rem; color: var(--text-secondary); cursor: pointer; position: absolute; right: 1rem; top: 1rem; display: flex; align-items: center; justify-content: center; padding: 4px;">&times;</button>
-      
-      <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem; font-weight: 700;">Submit Feedback</h3>
-      <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.95rem;">Let us know how we can make MeetMind better!</p>
-      
-      <div id="feedback-alert" class="alert alert-danger"></div>
-      <div id="feedback-success" class="alert alert-success"></div>
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); margin-bottom: 1.5rem;">
+        <div>
+          <label style="font-weight: 700; display: block; font-size: 0.95rem;">Make Publicly Accessible</label>
+          <span style="font-size: 0.8rem; color: var(--text-secondary);">Anyone with the link can view summary & MOM.</span>
+        </div>
+        <input type="checkbox" id="public-toggle" style="width: 22px; height: 22px; cursor: pointer;">
+      </div>
 
-      <div class="form-group">
-        <label>Your Rating</label>
-        <div style="display: flex; gap: 0.5rem; font-size: 2rem; cursor: pointer; margin-bottom: 1rem;" id="star-rating-container">
-          <span class="feedback-star" data-rating="1" style="color: var(--text-muted); transition: color 0.2s;">★</span>
-          <span class="feedback-star" data-rating="2" style="color: var(--text-muted); transition: color 0.2s;">★</span>
-          <span class="feedback-star" data-rating="3" style="color: var(--text-muted); transition: color 0.2s;">★</span>
-          <span class="feedback-star" data-rating="4" style="color: var(--text-muted); transition: color 0.2s;">★</span>
-          <span class="feedback-star" data-rating="5" style="color: var(--text-muted); transition: color 0.2s;">★</span>
+      <!-- Public link section -->
+      <div id="public-link-container" style="display: none; margin-bottom: 1.5rem;">
+        <label style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600; display: block; margin-bottom: 0.5rem;">PUBLIC URL</label>
+        <div class="share-row">
+          <input type="text" id="share-url-input" class="form-control" readonly style="font-size: 0.85rem;">
+          <button id="copy-share-url-btn" class="btn btn-secondary" style="white-space: nowrap;">Copy Link</button>
+        </div>
+
+        <label style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600; display: block; margin-bottom: 0.5rem; margin-top: 1.5rem;">SOCIAL SHARE</label>
+        <div class="social-share-buttons">
+          <button id="share-whatsapp-btn" class="btn btn-secondary" style="border-color: rgba(37, 211, 102, 0.3); color: #25D366; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+            <span>💬</span> WhatsApp
+          </button>
+          <button id="share-email-btn" class="btn btn-secondary" style="border-color: rgba(79, 142, 247, 0.3); color: var(--accent); display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+            <span>✉️</span> Email Report
+          </button>
         </div>
       </div>
-      
-      <div class="form-group">
-        <label for="feedback-message">Message</label>
-        <textarea id="feedback-message" class="form-control" rows="4" placeholder="Tell us what you like or what we can improve..." style="resize: none;"></textarea>
-      </div>
-      
-      <button id="submit-feedback-btn" class="btn btn-primary" style="width: 100%;">Submit Feedback</button>
+
+      <button class="btn btn-primary" onclick="closeShareModal()" style="width: 100%; margin-top: 1rem;">Done</button>
     </div>
   </div>
 
+  <script src="js/shortcuts.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/meeting.js"></script>
 </body>

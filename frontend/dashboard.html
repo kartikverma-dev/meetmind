@@ -6,55 +6,391 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' http://localhost:8000 https://meetmind-backend-90u7.onrender.com;">
   <title>Dashboard — MeetMind</title>
   <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* Dashboard specific layout structures */
+    .dashboard-layout {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      width: 280px;
+      background: rgba(13, 13, 26, 0.65);
+      border-right: 1px solid var(--glass-border);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      padding: 2.5rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: fixed;
+      top: 0; bottom: 0; left: 0;
+      z-index: 100;
+    }
+
+    .main-content {
+      margin-left: 280px;
+      flex-grow: 1;
+      padding: 3rem;
+      position: relative;
+      z-index: 10;
+      max-width: 1200px;
+    }
+
+    @media (max-width: 900px) {
+      .sidebar {
+        width: 80px;
+        padding: 2rem 0.5rem;
+        align-items: center;
+      }
+      .sidebar .logo span, .sidebar .sidebar-link span:not(.icon), .sidebar .beta-tag {
+        display: none;
+      }
+      .sidebar .logo {
+        justify-content: center;
+        margin-bottom: 2rem;
+      }
+      .main-content {
+        margin-left: 80px;
+        padding: 2rem 1rem;
+      }
+    }
+
+    .sidebar-link {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.85rem 1.25rem;
+      color: var(--text-secondary);
+      border-radius: var(--radius-sm);
+      font-weight: 500;
+      transition: var(--transition);
+      margin-bottom: 0.5rem;
+    }
+
+    .sidebar-link:hover, .sidebar-link.active {
+      color: white;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+    }
+
+    .sidebar-link .icon {
+      font-size: 1.25rem;
+    }
+
+    /* Stats Cards Row */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      margin-bottom: 3rem;
+    }
+
+    .stat-card {
+      padding: 1.75rem;
+      text-align: left;
+    }
+
+    .stat-card .label {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-secondary);
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-card .value {
+      font-size: 2.25rem;
+      font-weight: 800;
+      color: white;
+    }
+
+    /* Quick Action Cards */
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      margin-bottom: 3.5rem;
+    }
+
+    .action-card {
+      padding: 2rem;
+      text-align: center;
+      cursor: pointer;
+    }
+
+    .action-card:hover {
+      transform: translateY(-4px);
+    }
+
+    .action-card .icon {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      display: inline-block;
+    }
+
+    .action-card h4 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .action-card p {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    /* Action Items Tracker */
+    .tracker-panel {
+      padding: 2rem;
+      margin-bottom: 3.5rem;
+    }
+
+    .tracker-title {
+      font-size: 1.3rem;
+      font-weight: 800;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .tracker-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .tracker-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.5rem;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      transition: var(--transition);
+    }
+
+    .tracker-item:hover {
+      border-color: rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.04);
+    }
+
+    .tracker-left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .tracker-checkbox {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      accent-color: var(--accent);
+    }
+
+    .tracker-info h5 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+
+    .tracker-info p {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    .tracker-info p a {
+      color: var(--accent);
+      text-decoration: underline;
+    }
+
+    .tracker-meta {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    .tracker-owner {
+      font-size: 0.85rem;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      padding: 0.25rem 0.75rem;
+      border-radius: 100px;
+      color: var(--text-primary);
+    }
+
+    .tracker-deadline {
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .deadline-overdue {
+      color: var(--error);
+    }
+
+    .deadline-upcoming {
+      color: var(--warning);
+    }
+
+    /* Modal Styling */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(12px);
+    }
+  </style>
 </head>
 <body>
 
-  <!-- Dashboard Header -->
-  <header class="dashboard-header">
-    <div class="nav-container">
-      <a href="index.html" class="logo">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
-        Meet<span>Mind</span>
-      </a>
-      <div style="display: flex; align-items: center; gap: 1rem;">
-        <span id="user-display" style="font-size: 0.95rem; color: var(--text-secondary);"></span>
-        <button id="logout-btn" class="btn btn-secondary" style="padding: 0.4rem 1rem; font-size: 0.85rem;">Logout</button>
-      </div>
-    </div>
-  </header>
+  <!-- Ambient background orbs -->
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
 
-  <div class="dashboard-container">
-    <!-- Share/Referral Banner -->
-    <div id="share-banner" class="glass-card" style="display: none; padding: 1.5rem 2rem; margin-bottom: 2rem; justify-content: space-between; align-items: center; background: linear-gradient(90deg, rgba(79, 142, 247, 0.15), rgba(139, 92, 246, 0.15)); border: 1px solid rgba(79, 142, 247, 0.25); position: relative;">
-      <div style="flex-grow: 1; padding-right: 2rem;">
-        <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.25rem;">Enjoying MeetMind? Share & Get Priority Access!</h3>
-        <p style="color: var(--text-secondary); font-size: 0.9rem;">Invite your colleagues to our Free Beta launch. Get a lifetime priority tier when we launch paid plans.</p>
-        <div style="margin-top: 0.75rem; display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-          <input type="text" id="referral-link-input" readonly class="form-control" style="max-width: 320px; font-size: 0.85rem; padding: 0.4rem 0.75rem;" value="">
-          <button id="copy-ref-btn" class="btn btn-secondary" style="padding: 0.4rem 1rem; font-size: 0.85rem;">Copy Link</button>
-        </div>
-      </div>
-      <button id="close-share-banner" style="background: none; border: none; font-size: 1.5rem; color: var(--text-secondary); cursor: pointer; position: absolute; right: 1rem; top: 1rem; display: flex; align-items: center; justify-content: center; padding: 4px;">&times;</button>
-    </div>
+  <!-- Toast system -->
+  <div id="toast" class="toast"></div>
 
-    <!-- Upload Card -->
-    <div class="glass-card" style="padding: 2.5rem; margin-bottom: 2rem;">
-      <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem; font-weight: 700;">New Meeting Analysis</h2>
-      <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.95rem;">Upload your meeting recording (MP3, MP4, M4A, WAV, WebM) to generate MOM & summaries.</p>
-
-      <div id="upload-alert" class="alert alert-danger"></div>
-
-      <!-- Drag & Drop Zone -->
-      <div id="drop-zone" class="upload-zone">
-        <div class="upload-icon">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
-        </div>
-        <h4 style="font-size: 1.1rem; margin-bottom: 0.25rem;">Drag & drop your recording file here</h4>
-        <p style="color: var(--text-muted); font-size: 0.9rem;">or click to select file from your system</p>
+  <div class="dashboard-layout">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div>
+        <a href="index.html" class="logo" style="margin-bottom: 3rem; display: flex;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+          Meet<span>Mind</span>
+        </a>
         
+        <nav>
+          <a href="recorder.html" class="sidebar-link">
+            <span class="icon">🎙️</span>
+            <span>Record Meeting</span>
+          </a>
+          <a href="#" class="sidebar-link active" onclick="event.preventDefault(); triggerUploadModal();">
+            <span class="icon">📤</span>
+            <span>Upload Recording</span>
+          </a>
+          <a href="search.html" class="sidebar-link">
+            <span class="icon">🔍</span>
+            <span>Search Syncs</span>
+          </a>
+          <a href="#" class="sidebar-link" onclick="event.preventDefault(); scrollToSection('action-items-tracker');">
+            <span class="icon">✅</span>
+            <span>Action Items</span>
+          </a>
+        </nav>
+      </div>
+
+      <div>
+        <div class="beta-tag" style="padding: 0.6rem; background: var(--accent-soft); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); margin-bottom: 1.5rem; text-align: center;">
+          <span style="font-size: 0.75rem; font-weight: 700; color: var(--accent); letter-spacing: 0.5px;">BETA MEMBER 🚀</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+          <span id="user-display" style="font-size: 0.85rem; color: var(--text-secondary); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
+          <a href="#" id="logout-btn" style="font-size: 0.85rem; color: var(--error); font-weight: 600;">Log Out →</a>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Welcome Header -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3rem;">
+        <div>
+          <h2 style="font-size: 2.25rem; font-weight: 800;">Workspace Dashboard</h2>
+          <p style="color: var(--text-secondary); margin-top: 0.25rem;">Synthesize meeting notes, track action items, and query transcript details.</p>
+        </div>
+      </div>
+
+      <!-- Top Stats Row -->
+      <div class="stats-row">
+        <!-- Card 1 -->
+        <div class="glass-card stat-card">
+          <div class="label">Meetings Processed</div>
+          <div class="value" id="stat-total-meetings">-</div>
+        </div>
+        <!-- Card 2 -->
+        <div class="glass-card stat-card">
+          <div class="label">Pending Action Tasks</div>
+          <div class="value" id="stat-pending-tasks">-</div>
+        </div>
+        <!-- Card 3 -->
+        <div class="glass-card stat-card">
+          <div class="label">Total Meeting Duration</div>
+          <div class="value" id="stat-total-duration">-</div>
+        </div>
+      </div>
+
+      <!-- Quick Actions Grid -->
+      <h3 style="font-size: 1.3rem; font-weight: 800; margin-bottom: 1.5rem;">Quick Synthesizer</h3>
+      <div class="quick-actions">
+        <!-- Card 1 -->
+        <div class="glass-card action-card" onclick="location.href='recorder.html'">
+          <span class="icon">🔴</span>
+          <h4>Record Audio</h4>
+          <p>Record directly in your browser with screen, mic, and tab audio combination.</p>
+        </div>
+        <!-- Card 2 -->
+        <div class="glass-card action-card" onclick="triggerUploadModal()">
+          <span class="icon">📤</span>
+          <h4>Upload File</h4>
+          <p>Analyze pre-recorded audio/video files (MP3, MP4, M4A, WAV, WebM).</p>
+        </div>
+        <!-- Card 3 -->
+        <div class="glass-card action-card" onclick="triggerPasteModal()">
+          <span class="icon">📋</span>
+          <h4>Paste Transcript</h4>
+          <p>Paste copy-pasted raw meeting transcripts to write MOM instantly.</p>
+        </div>
+      </div>
+
+      <!-- Action Items Tracker Section -->
+      <div class="glass-card tracker-panel" id="action-items-tracker">
+        <div class="tracker-title">
+          <span>✅</span> Consolidated Action Items
+        </div>
+        
+        <div id="tracker-empty-state" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+          No pending action items found. All tasks are completed!
+        </div>
+
+        <div class="tracker-list" id="tracker-list">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- Recent Meetings List Grid -->
+      <div>
+        <h3 style="font-size: 1.3rem; font-weight: 800; margin-bottom: 1.5rem;">Recent Meetings</h3>
+        <div id="meetings-empty-state" style="text-align: center; padding: 4rem 1rem; color: var(--text-secondary); display: none;">
+          <p style="font-size: 1.1rem;">You haven't uploaded any meetings yet.</p>
+        </div>
+        <div id="meetings-grid" class="meetings-grid">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Upload Modal -->
+  <div id="upload-modal" class="modal-overlay" onclick="closeModal('upload-modal')">
+    <div class="glass-card glass-modal" style="max-width: 550px; width: 90%; padding: 2.5rem;" onclick="event.stopPropagation()">
+      <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem; font-weight: 800;">Upload Audio/Video Recording</h3>
+      <p style="color: var(--text-secondary); margin-bottom: 2.0rem; font-size: 0.9rem;">Upload your meeting file to generate MOM & summaries.</p>
+      
+      <div id="upload-alert" class="alert alert-danger" style="display: none;"></div>
+
+      <div id="drop-zone" class="upload-zone">
+        <div class="upload-icon">📤</div>
+        <h4 style="font-size: 1.1rem; margin-bottom: 0.25rem;">Drag & drop your file here</h4>
+        <p style="color: var(--text-tertiary); font-size: 0.85rem;">or click to browse local files</p>
         <input type="file" id="file-input" style="display: none;" accept="audio/*,video/*">
         
-        <!-- Progress Fill -->
         <div id="progress-bar" class="upload-progress">
           <div id="progress-fill" class="upload-progress-fill"></div>
         </div>
@@ -62,65 +398,81 @@
       </div>
 
       <div class="form-group" style="margin-top: 1.5rem;">
-        <label for="meeting-title">Meeting Title (Optional)</label>
-        <input type="text" id="meeting-title" class="form-control" placeholder="E.g., Product Kickoff - June 2026">
+        <label for="upload-title">Meeting Title</label>
+        <input type="text" id="upload-title" class="form-control" placeholder="E.g., Website Release Alignment">
       </div>
-      
-      <button id="process-btn" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;" disabled>
-        Process Recording
-      </button>
-    </div>
 
-    <!-- Meetings List Grid -->
-    <div>
-      <h3 class="meetings-title">Your Meetings</h3>
-      <div id="empty-state" style="text-align: center; padding: 4rem 1rem; color: var(--text-secondary); display: none;">
-        <p style="font-size: 1.1rem;">You haven't uploaded any meetings yet.</p>
+      <div class="form-group">
+        <label for="upload-language">Transcription Language</label>
+        <select id="upload-language" class="form-control">
+          <option value="auto">Auto-Detect Language</option>
+          <option value="en">English</option>
+          <option value="hi">Hindi (हिंदी)</option>
+          <option value="ta">Tamil (தமிழ்)</option>
+          <option value="te">Telugu (తెలుగు)</option>
+          <option value="bn">Bengali (বাংলা)</option>
+          <option value="mr">Marathi (मराठी)</option>
+          <option value="fr">French (Français)</option>
+          <option value="de">German (Deutsch)</option>
+          <option value="pt">Portuguese (Português)</option>
+          <option value="es">Spanish (Español)</option>
+        </select>
       </div>
-      <div id="meetings-grid" class="meetings-grid">
-        <!-- Rendered dynamically -->
+
+      <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+        <button class="btn btn-secondary" onclick="closeModal('upload-modal')" style="flex: 1;">Cancel</button>
+        <button id="process-btn" class="btn btn-primary" style="flex: 1;" disabled>Process Recording</button>
       </div>
     </div>
   </div>
 
-  <!-- Floating Feedback Widget -->
-  <button id="feedback-widget-btn" style="position: fixed; bottom: 2rem; right: 2rem; z-index: 1000; background: linear-gradient(135deg, #4F8EF7, #8B5CF6); color: #FFF; border: none; padding: 0.75rem 1.25rem; border-radius: 50px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 20px rgba(79, 142, 247, 0.4); transition: transform 0.2s ease;">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-    Feedback
-  </button>
+  <!-- Paste Transcript Modal -->
+  <div id="paste-modal" class="modal-overlay" onclick="closeModal('paste-modal')">
+    <div class="glass-card glass-modal" style="max-width: 600px; width: 90%; padding: 2.5rem;" onclick="event.stopPropagation()">
+      <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem; font-weight: 800;">Paste Meeting Transcript</h3>
+      <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9rem;">Copy-paste a meeting transcript directly. AI processes in seconds.</p>
 
-  <!-- Feedback Modal -->
-  <div id="feedback-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.75); z-index: 1001; align-items: center; justify-content: center; backdrop-filter: blur(8px);">
-    <div class="glass-card" style="max-width: 450px; width: 90%; padding: 2.5rem; position: relative;">
-      <button id="close-feedback-modal" style="background: none; border: none; font-size: 1.5rem; color: var(--text-secondary); cursor: pointer; position: absolute; right: 1rem; top: 1rem; display: flex; align-items: center; justify-content: center; padding: 4px;">&times;</button>
-      
-      <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem; font-weight: 700;">Submit Feedback</h3>
-      <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.95rem;">Let us know how we can make MeetMind better!</p>
-      
-      <div id="feedback-alert" class="alert alert-danger"></div>
-      <div id="feedback-success" class="alert alert-success"></div>
+      <div id="paste-alert" class="alert alert-danger" style="display: none;"></div>
 
       <div class="form-group">
-        <label>Your Rating</label>
-        <div style="display: flex; gap: 0.5rem; font-size: 2rem; cursor: pointer; margin-bottom: 1rem;" id="star-rating-container">
-          <span class="feedback-star" data-rating="1" style="color: var(--text-muted); transition: color 0.2s;">★</span>
-          <span class="feedback-star" data-rating="2" style="color: var(--text-muted); transition: color 0.2s;">★</span>
-          <span class="feedback-star" data-rating="3" style="color: var(--text-muted); transition: color 0.2s;">★</span>
-          <span class="feedback-star" data-rating="4" style="color: var(--text-muted); transition: color 0.2s;">★</span>
-          <span class="feedback-star" data-rating="5" style="color: var(--text-muted); transition: color 0.2s;">★</span>
-        </div>
+        <label for="paste-title">Meeting Title</label>
+        <input type="text" id="paste-title" class="form-control" placeholder="E.g., Q3 Project Sync" required>
       </div>
-      
+
       <div class="form-group">
-        <label for="feedback-message">Message</label>
-        <textarea id="feedback-message" class="form-control" rows="4" placeholder="Tell us what you like or what we can improve..." style="resize: none;"></textarea>
+        <label for="paste-transcript">Transcript Text</label>
+        <textarea id="paste-transcript" class="form-control" rows="8" placeholder="Alice: We need to complete the landing page redesign.&#10;Bob: I can finish it by Monday night..." style="resize: none;" required></textarea>
       </div>
-      
-      <button id="submit-feedback-btn" class="btn btn-primary" style="width: 100%;">Submit Feedback</button>
+
+      <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+        <button class="btn btn-secondary" onclick="closeModal('paste-modal')" style="flex: 1;">Cancel</button>
+        <button id="paste-submit-btn" class="btn btn-primary" style="flex: 1;">Generate MOM</button>
+      </div>
     </div>
   </div>
 
-  <script src="/js/auth.js"></script>
-  <script src="/js/dashboard.js"></script>
+  <script src="js/shortcuts.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script>
+    function triggerUploadModal() {
+      document.getElementById('upload-modal').style.display = 'flex';
+    }
+    
+    function triggerPasteModal() {
+      document.getElementById('paste-modal').style.display = 'flex';
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).style.display = 'none';
+    }
+
+    function scrollToSection(id) {
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  </script>
 </body>
 </html>

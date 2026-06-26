@@ -4,509 +4,396 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' http://localhost:8000 https://meetmind-backend-90u7.onrender.com;">
-  <title>MeetMind — AI-Powered Meeting Summarizer</title>
-  <meta name="description" content="Generate Minutes of Meetings (MOM), 5-bullet summaries, and ask questions about your meetings instantly.">
+  <title>MeetMind — Never Take Meeting Notes Again</title>
+  <meta name="description" content="Record meetings in your browser. Get instant MOM, summaries, and action items with Gemini AI. 100% Free forever.">
   <link rel="stylesheet" href="css/style.css">
   <style>
-    /* Premium Theme Overrides & Additions */
-    body {
-      background-color: #0a0a1a;
-      background-image: 
-        radial-gradient(at 0% 0%, rgba(79, 142, 247, 0.12) 0px, transparent 50%),
-        radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.12) 0px, transparent 50%),
-        radial-gradient(at 50% 100%, rgba(79, 142, 247, 0.05) 0px, transparent 50%);
-    }
-
-    header {
-      background: rgba(10, 10, 26, 0.75);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-      position: sticky;
-      top: 0;
-      z-index: 1000;
-    }
-
-    /* Hero Section Redesign */
-    .hero-section {
-      padding: 9rem 1rem 6rem;
-      max-width: 900px;
-      margin: 0 auto;
-      text-align: center;
+    /* Hero layout style modifications for premium macOS Sequoia liquid feel */
+    .hero-wrapper {
       position: relative;
+      z-index: 10;
+      padding: 8rem 2rem 4rem;
+      text-align: center;
+      max-width: 1000px;
+      margin: 0 auto;
     }
-
-    .hero-section h1 {
-      font-size: 4rem;
-      line-height: 1.1;
+    
+    .hero-badge {
+      display: inline-block;
+      padding: 6px 16px;
+      background: var(--accent-soft);
+      border: 1px solid var(--glass-border);
+      color: var(--accent);
+      border-radius: 100px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 2rem;
+      backdrop-filter: var(--glass-blur);
+    }
+    
+    .hero-title {
+      font-size: 4.5rem;
       font-weight: 800;
       letter-spacing: -2px;
+      line-height: 1.1;
       margin-bottom: 1.5rem;
-    }
-
-    .hero-section h1 span {
-      background: linear-gradient(135deg, #4F8EF7, #8B5CF6);
+      background: linear-gradient(135deg, #FFF 40%, rgba(255,255,255,0.7) 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-
-    .hero-section p {
-      font-size: 1.25rem;
-      color: #9CA3AF;
-      max-width: 700px;
-      margin: 0 auto 2.5rem;
+    
+    .hero-title span {
+      background: linear-gradient(135deg, var(--accent), var(--purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    .hero-subtitle {
+      font-size: 1.35rem;
+      color: var(--text-secondary);
+      max-width: 750px;
+      margin: 0 auto 3rem;
       line-height: 1.6;
     }
-
-    .hero-badge {
-      background: rgba(79, 142, 247, 0.1);
-      border: 1px solid rgba(79, 142, 247, 0.25);
-      color: #4F8EF7;
-      padding: 0.5rem 1.25rem;
-      font-size: 0.875rem;
-      font-weight: 600;
-      letter-spacing: 0.5px;
-      margin-bottom: 2rem;
-    }
-
-    .hero-social-proof {
-      margin-top: 3.5rem;
-      display: inline-flex;
-      align-items: center;
-      gap: 1.5rem;
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      padding: 0.75rem 1.5rem;
-      border-radius: 50px;
-      font-size: 0.9rem;
-      color: #9CA3AF;
-    }
-
-    .hero-social-proof span.highlight {
-      color: #FFF;
-      font-weight: 700;
-    }
-
-    /* Section Headers */
-    .section-title {
-      text-align: center;
+    
+    .hero-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 1.25rem;
+      flex-wrap: wrap;
       margin-bottom: 4rem;
-      padding: 0 1rem;
     }
 
-    .section-title h2 {
-      font-size: 2.5rem;
-      font-weight: 800;
-      letter-spacing: -1px;
-    }
-
-    .section-title h2 span {
-      background: linear-gradient(135deg, #4F8EF7, #8B5CF6);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    .section-title p {
-      color: #9CA3AF;
-      margin-top: 0.75rem;
-      font-size: 1.1rem;
-    }
-
-    /* Problem Section */
-    .problem-section {
-      padding: 6rem 1rem;
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-
-    .problem-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 2rem;
-      margin-top: 3rem;
-    }
-
-    .problem-card {
-      padding: 2.5rem;
-      border-radius: 16px;
-      border: 1px solid rgba(239, 68, 68, 0.1);
-      background: rgba(239, 68, 68, 0.02);
-      transition: all 0.3s ease;
-    }
-
-    .problem-card:hover {
-      border-color: rgba(239, 68, 68, 0.2);
-      background: rgba(239, 68, 68, 0.04);
-      transform: translateY(-4px);
-    }
-
-    .problem-card .icon-red {
-      color: #EF4444;
-      margin-bottom: 1.25rem;
-      display: inline-block;
-    }
-
-    /* How It Works Section */
-    .how-section {
-      padding: 6rem 1rem;
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-
-    .steps-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 2.5rem;
-    }
-
-    .step-card {
-      position: relative;
-      padding: 2.5rem;
-      border-radius: 16px;
-    }
-
-    .step-number {
-      position: absolute;
-      top: -20px;
-      left: 24px;
-      width: 40px;
-      height: 40px;
-      background: linear-gradient(135deg, #4F8EF7, #8B5CF6);
-      color: #FFF;
+    .social-proof-bar {
       display: flex;
       align-items: center;
       justify-content: center;
-      border-radius: 50%;
-      font-weight: 800;
-      font-size: 1.1rem;
-      box-shadow: 0 4px 15px rgba(79, 142, 247, 0.3);
+      gap: 1rem;
+      padding: 1rem 2rem;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 100px;
+      max-width: 800px;
+      margin: 0 auto 6rem;
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+      backdrop-filter: var(--glass-blur);
     }
 
-    /* Features Grid Adjustments */
-    .features-grid {
-      padding: 0 1rem;
-      margin-bottom: 6rem;
+    .social-proof-bar span.highlight {
+      color: white;
+      font-weight: 600;
     }
 
-    .feature-card {
-      border-radius: 16px;
-      transition: all 0.3s ease;
-    }
-
-    .feature-card:hover {
-      border-color: rgba(79, 142, 247, 0.3);
-      transform: translateY(-4px);
-      box-shadow: 0 10px 30px rgba(79, 142, 247, 0.08);
-    }
-
-    /* Beta Pricing Card styling */
-    .pricing-card.beta-card {
-      border: 1px solid rgba(79, 142, 247, 0.3);
-      background: linear-gradient(145deg, rgba(79, 142, 247, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
-      box-shadow: 0 0 40px rgba(79, 142, 247, 0.1);
-      max-width: 450px;
-      margin: 3rem auto 0;
-      border-radius: 20px;
-    }
-
-    .pricing-card.beta-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 4px;
-      background: linear-gradient(90deg, #4F8EF7, #8B5CF6);
-    }
-
-    .beta-badge {
-      background: linear-gradient(135deg, #4F8EF7, #8B5CF6);
-      color: #FFF;
-      padding: 0.35rem 1rem;
-      font-size: 0.75rem;
-      font-weight: 700;
-      border-radius: 50px;
-      display: inline-block;
-      margin-bottom: 1.5rem;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-
-    /* Stats Bar Section */
-    .stats-bar-section {
-      background: rgba(255, 255, 255, 0.02);
-      border-top: 1px solid rgba(255, 255, 255, 0.05);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-      padding: 4rem 1rem;
-      margin: 6rem 0;
-    }
-
-    .stats-bar-container {
-      max-width: 1000px;
+    /* Interactive Feature Grid */
+    .features-section {
+      padding: 6rem 2rem;
+      max-width: 1200px;
       margin: 0 auto;
-      display: flex;
-      justify-content: space-around;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 3rem;
+      position: relative;
+      z-index: 10;
     }
 
-    .stat-item {
+    .features-section h2 {
       text-align: center;
+      font-size: 2.75rem;
+      font-weight: 800;
+      letter-spacing: -1px;
+      margin-bottom: 3.5rem;
     }
 
-    .stat-value {
-      font-size: 3.5rem;
-      font-weight: 800;
-      color: #FFF;
-      line-height: 1;
-      margin-bottom: 0.5rem;
-      font-family: 'Outfit', sans-serif;
-      background: linear-gradient(135deg, #FFF, #9CA3AF);
+    .features-section h2 span {
+      background: linear-gradient(135deg, var(--accent), var(--purple));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
 
-    .stat-label {
-      font-size: 1rem;
-      color: #9CA3AF;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      font-weight: 600;
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 2rem;
     }
 
-    /* Footer Section */
-    footer {
-      border-top: 1px solid rgba(255, 255, 255, 0.05);
-      padding: 4rem 1rem;
-      text-align: center;
-      color: #6B7280;
-      background: #060612;
+    .feature-card {
+      padding: 2.5rem;
+      text-align: left;
+      cursor: pointer;
     }
 
-    .footer-logo {
-      font-size: 1.5rem;
-      font-weight: 800;
-      color: #FFF;
-      display: inline-flex;
+    .feature-card:hover {
+      transform: translateY(-8px) scale(1.02);
+    }
+
+    .feature-icon {
+      width: 54px;
+      height: 54px;
+      background: var(--accent-soft);
+      border-radius: var(--radius-md);
+      color: var(--accent);
+      display: flex;
       align-items: center;
-      gap: 0.5rem;
+      justify-content: center;
+      font-size: 1.5rem;
       margin-bottom: 1.5rem;
+      border: 1px solid rgba(79, 142, 247, 0.2);
+      transition: var(--transition);
     }
 
-    .footer-logo span {
-      color: #4F8EF7;
+    .feature-card:hover .feature-icon {
+      background: linear-gradient(135deg, var(--accent), var(--purple));
+      color: white;
+      transform: rotate(5deg);
     }
 
-    @media (max-width: 768px) {
-      .hero-section h1 {
-        font-size: 2.75rem;
+    .feature-card h3 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+    }
+
+    .feature-card p {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    /* Demo Section */
+    .demo-section {
+      padding: 6rem 2rem 8rem;
+      max-width: 1000px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 10;
+    }
+
+    .demo-card {
+      padding: 3rem;
+      text-align: left;
+    }
+
+    .demo-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1.8fr;
+      gap: 3rem;
+      margin-top: 2rem;
+    }
+
+    @media (max-width: 800px) {
+      .demo-grid {
+        grid-template-columns: 1fr;
+        gap: 2rem;
       }
-      .stats-bar-container {
+      .hero-title {
+        font-size: 3rem;
+      }
+      .social-proof-bar {
+        border-radius: 20px;
         flex-direction: column;
-        gap: 2.5rem;
+        text-align: center;
       }
+    }
+
+    .demo-transcript-pane {
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+      font-family: var(--font-secondary);
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .demo-mom-pane {
+      background: rgba(0,0,0,0.2);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-md);
+      padding: 2rem;
+      min-height: 300px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .typing-cursor {
+      display: inline-block;
+      width: 6px;
+      height: 15px;
+      background: var(--accent);
+      margin-left: 3px;
+      animation: blink 0.8s infinite;
+      vertical-align: middle;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 0; }
+      50% { opacity: 1; }
     }
   </style>
 </head>
 <body>
 
+  <!-- Ambient background orbs -->
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+
   <!-- Navigation -->
-  <header>
-    <div class="nav-container">
+  <header style="background: rgba(8, 8, 16, 0.7); backdrop-filter: blur(20px); border-bottom: 1px solid var(--glass-border); position: sticky; top: 0; z-index: 1000;">
+    <div class="nav-container" style="display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 5%;">
       <a href="index.html" class="logo">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
         Meet<span>Mind</span>
       </a>
-      <nav id="nav-actions">
-        <a href="login.html" class="btn btn-secondary" style="margin-right: 0.5rem; padding: 0.5rem 1.25rem;">Login</a>
+      <div id="nav-actions" style="display: flex; gap: 0.75rem; align-items: center;">
+        <a href="login.html" class="btn btn-secondary" style="padding: 0.5rem 1.25rem;">Login</a>
         <a href="signup.html" class="btn btn-primary" style="padding: 0.5rem 1.25rem;">Sign Up</a>
-      </nav>
+      </div>
     </div>
   </header>
 
   <!-- Hero Section -->
-  <section class="hero-section">
-    <div class="hero-badge">FREE BETA LAUNCH NOW ACTIVE</div>
-    <h1>Turn Meeting Audio into <br><span>Actionable Insights</span></h1>
-    <p>Upload meeting recordings. Get instant Minutes of Meetings (MOM), executive summaries, and interact with a smart AI assistant that knows every detail.</p>
-    <div>
-      <a href="signup.html" class="btn btn-primary" style="font-size: 1.15rem; padding: 1rem 2.5rem; border-radius: 8px;">Claim Free Access Now</a>
-    </div>
+  <main class="hero-wrapper">
+    <div class="hero-badge">🚀 100% Free Forever Launch</div>
+    <h1 class="hero-title">Never take <br><span>meeting notes</span> again.</h1>
+    <p class="hero-subtitle">Record any meeting in your browser. MeetMind's AI automatically writes your Minutes of Meeting (MOM), executive summary, and extracts action items — in under 2 minutes. Free forever.</p>
     
-    <div class="hero-social-proof">
-      <span>🚀 Joint by <span class="highlight" id="stat-users-hero">150+</span> early users</span>
+    <div class="hero-buttons">
+      <a href="recorder.html" class="btn btn-primary" style="font-size: 1.1rem; padding: 0.9rem 2.2rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span style="color: #F87171; animation: pulse 2s infinite; font-size: 1.25rem;">🔴</span> Start Recording Free
+      </a>
+      <a href="signup.html" class="btn btn-secondary" style="font-size: 1.1rem; padding: 0.9rem 2.2rem;">
+        📤 Upload a Recording
+      </a>
+    </div>
+
+    <!-- Social Proof Bar -->
+    <div class="social-proof-bar">
+      <span>👥 Join <span class="highlight" id="stat-users-hero">250+</span> professionals</span>
       <span>•</span>
-      <span>🎙️ <span class="highlight" id="stat-meetings-hero">420+</span> meetings processed</span>
+      <span>🎙️ <span class="highlight" id="stat-meetings-hero">680+</span> meetings processed</span>
+      <span>•</span>
+      <span>🌐 Supports <span class="highlight">10+ languages</span></span>
+      <span>•</span>
+      <span>🎁 <span class="highlight">100% Free</span></span>
     </div>
-  </section>
+  </main>
 
-  <!-- Problem Section -->
-  <section class="problem-section">
-    <div class="section-title">
-      <h2>Why Meetings <span>Feel Like Waste</span></h2>
-      <p>The standard way we handle meetings is completely broken.</p>
-    </div>
-    <div class="problem-grid">
-      <div class="problem-card">
-        <div class="icon-red">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        </div>
-        <h3 style="margin-bottom: 0.75rem; font-weight: 700;">Lost Time</h3>
-        <p style="color: #9CA3AF; font-size: 0.95rem; line-height: 1.5;">Writing manuals notes takes focus away from the discussion and wastes hours of post-meeting summarization work.</p>
-      </div>
-      <div class="problem-card">
-        <div class="icon-red">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
-        </div>
-        <h3 style="margin-bottom: 0.75rem; font-weight: 700;">Forgotten Actions</h3>
-        <p style="color: #9CA3AF; font-size: 0.95rem; line-height: 1.5;">Action items, deadlines, and crucial details slip through the cracks, leading to duplicate alignments.</p>
-      </div>
-      <div class="problem-card">
-        <div class="icon-red">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-        </div>
-        <h3 style="margin-bottom: 0.75rem; font-weight: 700;">Information Siloing</h3>
-        <p style="color: #9CA3AF; font-size: 0.95rem; line-height: 1.5;">Absent team members miss out entirely, leading to long briefings or missed context on decisions.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- How It Works Section -->
-  <section class="how-section">
-    <div class="section-title">
-      <h2>How <span>MeetMind Works</span></h2>
-      <p>Transform your workflow in three simple steps.</p>
-    </div>
-    <div class="steps-grid">
-      <div class="step-card glass-card">
-        <div class="step-number">1</div>
-        <h3 style="margin-top: 0.5rem; margin-bottom: 0.75rem; font-weight: 700;">Upload Audio</h3>
-        <p style="color: #9CA3AF; font-size: 0.95rem;">Drag & drop your MP3, WAV, or M4A recording file directly into the dashboard. Whisper automatically starts transcription.</p>
-      </div>
-      <div class="step-card glass-card">
-        <div class="step-number">2</div>
-        <h3 style="margin-top: 0.5rem; margin-bottom: 0.75rem; font-weight: 700;">AI Synthesis</h3>
-        <p style="color: #9CA3AF; font-size: 0.95rem;">Gemini parses the transcript to extract structured data: attendee lists, agendas, key decisions, and deadline assignments.</p>
-      </div>
-      <div class="step-card glass-card">
-        <div class="step-number">3</div>
-        <h3 style="margin-top: 0.5rem; margin-bottom: 0.75rem; font-weight: 700;">Query & Export</h3>
-        <p style="color: #9CA3AF; font-size: 0.95rem;">Export beautiful PDFs or Word files. Use the integrated meeting assistant to ask follow-up questions about who said what.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- Features Section -->
-  <section class="features-grid-wrapper">
-    <div class="section-title">
-      <h2>Features Built for <span>Productivity</span></h2>
-      <p>Everything you need to capture, parse, and utilize meeting knowledge.</p>
-    </div>
-    <div class="features-grid">
-      <div class="feature-card glass-card">
-        <div class="icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-        </div>
-        <h3 style="font-weight: 700;">Voice Recognition</h3>
-        <p style="color: #9CA3AF; margin-top: 0.5rem; font-size: 0.95rem;">Whisper models transcribe your recordings into high-fidelity text with robust multi-speaker dynamics.</p>
-      </div>
-      
-      <div class="feature-card glass-card">
-        <div class="icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        </div>
-        <h3 style="font-weight: 700;">Actionable MOM</h3>
-        <p style="color: #9CA3AF; margin-top: 0.5rem; font-size: 0.95rem;">Clean formatting of agendas, attendee directories, and table lists showing task owners and deadlines.</p>
-      </div>
-
-      <div class="feature-card glass-card">
-        <div class="icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        </div>
-        <h3 style="font-weight: 700;">Ask Anything Bot</h3>
-        <p style="color: #9CA3AF; margin-top: 0.5rem; font-size: 0.95rem;">Enter follow-up queries. Get instant answers directly supported by quotes from the meeting transcript.</p>
-      </div>
-
-      <div class="feature-card glass-card">
-        <div class="icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        </div>
-        <h3 style="font-weight: 700;">DOCX & PDF Export</h3>
-        <p style="color: #9CA3AF; margin-top: 0.5rem; font-size: 0.95rem;">Compile summary sheets into executive-ready PDF documents or editable Microsoft Word files instantly.</p>
-      </div>
-
-      <div class="feature-card glass-card">
-        <div class="icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        </div>
-        <h3 style="font-weight: 700;">Privacy-First Security</h3>
-        <p style="color: #9CA3AF; margin-top: 0.5rem; font-size: 0.95rem;">All sessions run securely. We enforce strict data storage settings so your corporate knowledge stays yours.</p>
-      </div>
-
-      <div class="feature-card glass-card">
-        <div class="icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-        </div>
-        <h3 style="font-weight: 700;">Lightning Fast</h3>
-        <p style="color: #9CA3AF; margin-top: 0.5rem; font-size: 0.95rem;">Get meeting transcripts and actionable insights compiled in minutes, not hours, using top-tier API connections.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- Beta Pricing Section -->
-  <section class="pricing-section">
-    <div class="section-title">
-      <h2>Simple, Transparent <span>Pricing</span></h2>
-      <p>Access all premium features during our free beta launch period.</p>
+  <!-- Feature Highlights -->
+  <section class="features-section">
+    <div class="section-title" style="text-align: center; margin-bottom: 4rem;">
+      <h2>Features Built for <span>High-Performing Teams</span></h2>
+      <p style="color: var(--text-secondary); font-size: 1.1rem; margin-top: 0.5rem;">MeetMind automates the tedious parts of your syncs entirely from the browser.</p>
     </div>
     
-    <div class="pricing-card glass-card beta-card">
-      <div class="beta-badge">Beta Plan</div>
-      <h3 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;">Early Access Pass</h3>
-      <div class="price" style="color: #FFF;">$0<span>/forever</span></div>
-      <p style="color: #9CA3AF; font-size: 0.95rem;">Full unlimited access. Help us shape the future of MeetMind.</p>
-      <ul class="pricing-features">
-        <li>Unlimited meetings processing</li>
-        <li>Max 3 hours audio file duration</li>
-        <li>Unlimited AI Q&A queries</li>
-        <li>Full PDF & DOCX exports</li>
-        <li>Beta priority support channels</li>
-      </ul>
-      <a href="signup.html" class="btn btn-primary" style="width: 100%; border-radius: 8px;">Sign Up Free</a>
+    <div class="features-grid">
+      <!-- Feature 1 -->
+      <div class="glass-card feature-card" onclick="location.href='recorder.html'">
+        <div class="feature-icon">🎙️</div>
+        <h3>Record Anything</h3>
+        <p>Direct in-browser capturing. Record tabs, screen, mic, and system audio simultaneously. No bot invites or calendar access required.</p>
+      </div>
+
+      <!-- Feature 2 -->
+      <div class="glass-card feature-card">
+        <div class="feature-icon">📋</div>
+        <h3>Instant MOM</h3>
+        <p>Gemini AI generates beautifully structured Minutes of Meetings, including attendee lists, agendas, and clear organizational decisions.</p>
+      </div>
+
+      <!-- Feature 3 -->
+      <div class="glass-card feature-card">
+        <div class="feature-icon">⚡</div>
+        <h3>2-Minute Processing</h3>
+        <p>Speedy transcribing and summarization. Get your complete summary and action items list ready for team distribution in minutes.</p>
+      </div>
+
+      <!-- Feature 4 -->
+      <div class="glass-card feature-card">
+        <div class="feature-icon">🌐</div>
+        <h3>10+ Languages</h3>
+        <p>Transcribe in Hindi, English, Spanish, French, German, and more. Even supports mixed languages and code-switching.</p>
+      </div>
+
+      <!-- Feature 5 -->
+      <div class="glass-card feature-card">
+        <div class="feature-icon">🔍</div>
+        <h3>Search All Meetings</h3>
+        <p>Full-text search indexed across all your past transcripts, MOM sections, action items, and titles with exact-match highlights.</p>
+      </div>
+
+      <!-- Feature 6 -->
+      <div class="glass-card feature-card">
+        <div class="feature-icon">✅</div>
+        <h3>Action Item Tracker</h3>
+        <p>Interactive dashboard consolidates tasks across all your meetings. Filter upcoming tasks and mark assignments complete.</p>
+      </div>
+
+      <!-- Feature 7 -->
+      <div class="glass-card feature-card">
+        <div class="feature-icon">🔗</div>
+        <h3>Share with Team</h3>
+        <p>Toggle public sharing links to share summary reports instantly. Directly links to WhatsApp, email, or Slack messages.</p>
+      </div>
+
+      <!-- Feature 8 -->
+      <div class="glass-card feature-card">
+        <div class="feature-icon">🔒</div>
+        <h3>Private & Secure</h3>
+        <p>Encrypted database, secure cookie-based auth, and strict privacy guidelines. Your corporate intelligence stays yours.</p>
+      </div>
     </div>
   </section>
 
-  <!-- Stats Bar Section -->
-  <section class="stats-bar-section">
-    <div class="stats-bar-container">
-      <div class="stat-item">
-        <div class="stat-value" id="stat-users-bar">150+</div>
-        <div class="stat-label">Active Users</div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-value" id="stat-meetings-bar">420+</div>
-        <div class="stat-label">Meetings Processed</div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-value">99.2%</div>
-        <div class="stat-label">Transcription Accuracy</div>
+  <!-- Demo Section -->
+  <section class="demo-section">
+    <div class="section-title" style="text-align: center; margin-bottom: 2rem;">
+      <h2>See the <span>AI Magic</span> in Real Time</h2>
+      <p style="color: var(--text-secondary); font-size: 1.1rem; margin-top: 0.5rem;">Watch how MeetMind processes transcripts and outputs structured MOM details.</p>
+    </div>
+
+    <div class="glass-card demo-card">
+      <div class="demo-grid">
+        <!-- Transcript column -->
+        <div>
+          <h4 style="font-weight: 700; margin-bottom: 1rem; font-size: 1.05rem; display: flex; align-items: center; gap: 0.5rem;">
+            <span style="color: #EF4444; animation: pulse 1.5s infinite;">●</span> Transcript Input
+          </h4>
+          <div class="demo-transcript-pane">
+            <p><strong>[00:02] Alice:</strong> Hi team, let's sync on the website release. We need the final launch to happen on Tuesday morning.</p>
+            <p style="margin-top: 0.5rem;"><strong>[00:24] Bob:</strong> Sounds good. I'll finish writing the unit tests and deploying the staging build by Monday.</p>
+            <p style="margin-top: 0.5rem;"><strong>[00:48] Charlie:</strong> Great, I'll coordinate the DNS updates and make sure the Vercel variables are fully configured.</p>
+          </div>
+        </div>
+
+        <!-- Generated MOM typewriter column -->
+        <div>
+          <h4 style="font-weight: 700; margin-bottom: 1rem; font-size: 1.05rem; display: flex; align-items: center; gap: 0.5rem;">
+            ✨ Generated MOM Output
+          </h4>
+          <div class="demo-mom-pane" id="demo-mom-pane">
+            <div id="demo-output-text"></div>
+            <span class="typing-cursor" id="demo-cursor"></span>
+          </div>
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- Footer Section -->
-  <footer>
+  <!-- Footer -->
+  <footer style="background: rgba(13, 13, 26, 0.95); border-top: 1px solid var(--glass-border); padding: 4rem 2rem; text-align: center;">
     <div class="footer-logo">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
       Meet<span>Mind</span>
     </div>
-    <p>© 2026 MeetMind. Built with ❤️ for productive teams. Currently in Free Beta.</p>
+    <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.95rem;">Powered by MeetMind 🤖 — meetmind-nine.vercel.app</p>
+    <a href="signup.html" class="btn btn-primary">Create Your Free Account →</a>
   </footer>
 
+  <script src="js/shortcuts.js"></script>
   <script src="js/auth.js"></script>
   <script>
-    // Safe routing check: if user session fallback exists, show 'Dashboard' link securely
+    // Show Dashboard if user is logged in
     const loggedInUser = getLoggedInUser();
     if (loggedInUser) {
       const navActions = document.getElementById('nav-actions');
@@ -529,16 +416,50 @@
           const data = await res.json();
           document.getElementById('stat-users-hero').textContent = data.total_users + '+';
           document.getElementById('stat-meetings-hero').textContent = data.total_meetings + '+';
-          document.getElementById('stat-users-bar').textContent = data.total_users + '+';
-          document.getElementById('stat-meetings-bar').textContent = data.total_meetings + '+';
         }
       } catch (err) {
         console.error('Failed to load stats:', err);
       }
     }
     
-    // Load stats on page load
+    // Load stats
     loadStats();
+
+    // Typewriter demo effect
+    const demoContent = `[MOM SUMMARY]
+📅 Date: Tuesday Launch Sync
+👥 Attendees: Alice, Bob, Charlie
+
+🎯 Agenda: Website Launch Alignment
+✅ Key Decisions:
+- Launch production build on Tuesday morning.
+
+📋 Action Items:
+- Write unit tests and staging build (Bob - Mon)
+- DNS updates and Vercel configs (Charlie - Mon)`;
+
+    const textEl = document.getElementById('demo-output-text');
+    const cursorEl = document.getElementById('demo-cursor');
+    let charIdx = 0;
+
+    function typeDemo() {
+      if (charIdx < demoContent.length) {
+        textEl.textContent += demoContent.charAt(charIdx);
+        charIdx++;
+        setTimeout(typeDemo, 25);
+      } else {
+        cursorEl.style.display = 'none';
+        setTimeout(() => {
+          textEl.textContent = '';
+          charIdx = 0;
+          cursorEl.style.display = 'inline-block';
+          typeDemo();
+        }, 5000); // Wait 5s before restart
+      }
+    }
+
+    // Start typewriter
+    setTimeout(typeDemo, 1000);
   </script>
 </body>
 </html>

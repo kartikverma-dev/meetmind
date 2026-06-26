@@ -1,36 +1,29 @@
-// DOM Elements
-const meetingTitle = document.getElementById('meeting-title');
-const meetingDate = document.getElementById('meeting-date');
-const meetingStatusBadge = document.getElementById('meeting-status-badge');
-const detailError = document.getElementById('detail-error');
-const contentPane = document.getElementById('meeting-content-pane');
-
-const summaryPointsList = document.getElementById('summary-points-list');
-const momAttendeesList = document.getElementById('mom-attendees-list');
-const momAgendaList = document.getElementById('mom-agenda-list');
-const momDecisionsList = document.getElementById('mom-decisions-list');
-const momActionsTableBody = document.getElementById('mom-actions-table-body');
-
-const chatForm = document.getElementById('chat-form');
-const chatInput = document.getElementById('chat-input');
-const chatMessages = document.getElementById('chat-messages');
-
-const exportPdfBtn = document.getElementById('export-pdf-btn');
-const exportDocxBtn = document.getElementById('export-docx-btn');
-const exportUpgradeModal = document.getElementById('export-upgrade-modal');
-const exportUpgradeBtn = document.getElementById('export-upgrade-btn');
-const exportModalCloseBtn = document.getElementById('export-modal-close-btn');
+// Meeting Details Screen Logic
 
 let meetingId = null;
 let pollInterval = null;
+let pollStartTime = Date.now();
+let currentMeeting = null;
 
-// Get meeting ID from Query Params
+// Get meeting ID from URL
 function getMeetingIdFromURL() {
   const params = new URLSearchParams(window.location.search);
   return params.get('id');
 }
 
-// Format Date
+// Toast Helper
+function showToast(message) {
+  const toast = document.getElementById('toast');
+  if (toast) {
+    toast.textContent = message;
+    toast.classList.add('show');
+    setTimeout(() => {
+      toast.classList.remove('show');
+    }, 4000);
+  }
+}
+
+// Format date
 function formatMeetingDate(isoString) {
   try {
     const d = new Date(isoString);
@@ -45,90 +38,127 @@ function formatMeetingDate(isoString) {
   }
 }
 
-let pollStartTime = Date.now();
+// Tab Switching
+function switchTab(tabName) {
+  document.querySelectorAll('.tab-trigger').forEach(btn => {
+    btn.classList.remove('active');
+    if (btn.getAttribute('onclick').includes(tabName)) {
+      btn.classList.add('active');
+    }
+  });
 
+  document.querySelectorAll('.tab-content-panel').forEach(panel => {
+    panel.classList.remove('active');
+  });
+  document.getElementById(`tab-${tabName}`).classList.add('active');
+}
+
+// Fetch details
+async function fetchMeetingDetails() {
+  if (!meetingId) {
+    showError('Invalid meeting ID.');
+    return;
+  }
+
+  // Prevent infinite polling (10 min timeout)
+  const elapsed = Math.floor((Date.now() - pollStartTime) / 1000);
+  if (elapsed > 600) {
+    stopPolling();
+    showError('Processing timed out. Server took too long.');
+    return;
+  }
+
+  try {
+    const response = await fetchWithAuth(`${API_BASE_URL}/api/v1/meetings/${meetingId}`);
+    if (!response.ok) {
+      if (response.status === 404) throw new Error('Meeting not found.');
+      if (response.status === 403) throw new Error('Access denied.');
+      throw new Error('Failed to retrieve meeting details.');
+    }
+
+    const meeting = await response.json();
+    currentMeeting = meeting;
+
+    if (meeting.status === 'failed') {
+      stopPolling();
+      throw new Error('Analysis failed. Please upload a clear audio recording.');
+    }
+
+    displayMeeting(meeting);
+    updateProgressUI(meeting.status);
+
+    if (meeting.status === 'processing') {
+      if (!pollInterval) {
+        pollInterval = setInterval(fetchMeetingDetails, 3000);
+      }
+    } else {
+      stopPolling();
+      // Load interactive action items once done
+      fetchInteractiveActionItems();
+    }
+  } catch (err) {
+    showError(err.message);
+    stopPolling();
+  }
+}
+
+function stopPolling() {
+  if (pollInterval) {
+    clearInterval(pollInterval);
+    pollInterval = null;
+  }
+  const stepsPanel = document.getElementById('processing-steps-panel');
+  if (stepsPanel) stepsPanel.style.display = 'none';
+}
+
+function showError(msg) {
+  const errEl = document.getElementById('detail-error');
+  errEl.textContent = msg;
+  errEl.style.display = 'block';
+  document.getElementById('meeting-content-pane').style.display = 'none';
+  document.getElementById('meeting-title').textContent = 'Error';
+  document.getElementById('meeting-status-badge').style.display = 'none';
+}
+
+// Update polling steps UI
 function updateProgressUI(status) {
   const panel = document.getElementById('processing-steps-panel');
   if (!panel) return;
 
   if (status === 'processing') {
     panel.style.display = 'block';
-    
     const elapsed = Math.floor((Date.now() - pollStartTime) / 1000);
     
     const step2Icon = document.getElementById('step-2-icon');
     const step2Text = document.getElementById('step-2-text');
     const step3Icon = document.getElementById('step-3-icon');
     const step3Text = document.getElementById('step-3-text');
-    const step4Icon = document.getElementById('step-4-icon');
-    const step4Text = document.getElementById('step-4-text');
-    
+
     if (elapsed < 12) {
-      if (step2Icon) {
-        step2Icon.style.background = 'var(--accent-primary)';
-        step2Icon.style.animation = 'pulse 1.5s infinite';
-        step2Icon.textContent = '2';
-      }
-      if (step2Text) step2Text.style.opacity = '1';
-      
-      if (step3Icon) {
-        step3Icon.style.background = 'var(--text-secondary)';
-        step3Icon.style.animation = 'none';
-        step3Icon.textContent = '3';
-      }
-      if (step3Text) step3Text.style.opacity = '0.5';
+      step2Icon.style.background = 'var(--accent)';
+      step2Icon.style.boxShadow = 'var(--accent-glow)';
+      step2Text.style.opacity = '1';
     } else {
-      if (step2Icon) {
-        step2Icon.style.background = 'var(--accent-success)';
-        step2Icon.style.animation = 'none';
-        step2Icon.textContent = '✓';
-      }
-      if (step2Text) step2Text.style.opacity = '1';
-      
-      if (step3Icon) {
-        step3Icon.style.background = 'var(--accent-primary)';
-        step3Icon.style.animation = 'pulse 1.5s infinite';
-        step3Icon.textContent = '3';
-      }
-      if (step3Text) step3Text.style.opacity = '1';
+      step2Icon.style.background = '#10B981';
+      step2Icon.style.boxShadow = 'none';
+      step2Icon.textContent = '✓';
+      step2Text.style.opacity = '1';
+
+      step3Icon.style.background = 'var(--accent)';
+      step3Icon.style.boxShadow = 'var(--accent-glow)';
+      step3Text.style.opacity = '1';
     }
-    
-    if (step4Icon) {
-      step4Icon.style.background = 'var(--text-secondary)';
-      step4Icon.style.animation = 'none';
-      step4Icon.textContent = '4';
-    }
-    if (step4Text) step4Text.style.opacity = '0.5';
-    
   } else if (status === 'done') {
     const step2Icon = document.getElementById('step-2-icon');
-    const step2Text = document.getElementById('step-2-text');
     const step3Icon = document.getElementById('step-3-icon');
-    const step3Text = document.getElementById('step-3-text');
-    const step4Icon = document.getElementById('step-4-icon');
-    const step4Text = document.getElementById('step-4-text');
-    
     if (step2Icon) {
-      step2Icon.style.background = 'var(--accent-success)';
-      step2Icon.style.animation = 'none';
+      step2Icon.style.background = '#10B981';
       step2Icon.textContent = '✓';
     }
-    if (step2Text) step2Text.style.opacity = '1';
-    
     if (step3Icon) {
-      step3Icon.style.background = 'var(--accent-success)';
-      step3Icon.style.animation = 'none';
+      step3Icon.style.background = '#10B981';
       step3Icon.textContent = '✓';
     }
-    if (step3Text) step3Text.style.opacity = '1';
-    
-    if (step4Icon) {
-      step4Icon.style.background = 'var(--accent-success)';
-      step4Icon.style.animation = 'none';
-      step4Icon.textContent = '✓';
-    }
-    if (step4Text) step4Text.style.opacity = '1';
-    
     setTimeout(() => {
       panel.style.display = 'none';
     }, 1500);
@@ -137,304 +167,369 @@ function updateProgressUI(status) {
   }
 }
 
-// Fetch Meeting details
-async function fetchMeetingDetails() {
-  if (!meetingId) {
-    showError('Invalid meeting ID.');
-    return;
-  }
-
-  const elapsed = Math.floor((Date.now() - pollStartTime) / 1000);
-  if (elapsed > 600) {
-    if (pollInterval) {
-      clearInterval(pollInterval);
-      pollInterval = null;
-    }
-    const panel = document.getElementById('processing-steps-panel');
-    if (panel) panel.style.display = 'none';
-    showError('Processing timed out. The server took too long to respond. Please try uploading again.');
-    return;
-  }
-
-  try {
-    const response = await fetchWithAuth(`${API_BASE_URL}/api/v1/meetings/${meetingId}`);
-
-    hideMessage();
-
-    if (!response.ok) {
-      if (response.status === 404) {
-        throw new Error('Meeting not found.');
-      } else if (response.status === 403) {
-        throw new Error('You do not have access to view this meeting.');
-      } else {
-        throw new Error('Failed to retrieve meeting details.');
-      }
-    }
-
-    const meeting = await response.json();
-
-    if (meeting.status === 'failed') {
-      const panel = document.getElementById('processing-steps-panel');
-      if (panel) panel.style.display = 'none';
-      throw new Error('Processing failed. Please try again with a valid audio file.');
-    }
-
-    displayMeeting(meeting);
-    updateProgressUI(meeting.status);
-    
-    // Auto polling check
-    if (meeting.status === 'processing') {
-      if (!pollInterval) {
-        pollStartTime = Date.now(); // reset timer on fresh start of page
-        pollInterval = setInterval(fetchMeetingDetails, 3000); // Poll every 3s
-      }
-    } else {
-      if (pollInterval) {
-        clearInterval(pollInterval);
-        pollInterval = null;
-      }
-    }
-
-  } catch (err) {
-    hideMessage();
-    showError(err.message);
-    if (pollInterval) {
-      clearInterval(pollInterval);
-      pollInterval = null;
-    }
-  }
-}
-
-function showError(msg) {
-  detailError.textContent = msg;
-  detailError.style.display = 'block';
-  contentPane.style.display = 'none';
-  meetingTitle.textContent = 'Error';
-  meetingStatusBadge.style.display = 'none';
-}
-
-// Display meeting details inside tabs
+// Render meeting fields
 function displayMeeting(meeting) {
-  contentPane.style.display = 'block';
-  meetingTitle.textContent = meeting.title;
-  meetingDate.textContent = formatMeetingDate(meeting.created_at);
+  document.getElementById('meeting-content-pane').style.display = 'block';
+  document.getElementById('meeting-title').textContent = meeting.title;
+  document.getElementById('meeting-title-input').value = meeting.title;
+  document.getElementById('meeting-date').textContent = formatMeetingDate(meeting.created_at);
 
-  // Status Badge
-  meetingStatusBadge.className = 'badge';
-  meetingStatusBadge.style.display = 'inline-block';
-  
+  const badge = document.getElementById('meeting-status-badge');
+  badge.className = 'badge';
+  badge.style.display = 'inline-block';
+
   if (meeting.status === 'done') {
-    meetingStatusBadge.classList.add('badge-done');
-    meetingStatusBadge.textContent = 'Done';
+    badge.classList.add('badge-done');
+    badge.textContent = 'Done';
   } else if (meeting.status === 'processing') {
-    meetingStatusBadge.classList.add('badge-processing');
-    meetingStatusBadge.textContent = 'Processing...';
+    badge.classList.add('badge-processing');
+    badge.textContent = 'Processing...';
   } else {
-    meetingStatusBadge.classList.add('badge-failed');
-    meetingStatusBadge.textContent = 'Failed';
+    badge.classList.add('badge-failed');
+    badge.textContent = 'Failed';
   }
 
-  // Populate Executive Summary
-  summaryPointsList.innerHTML = '';
+  // Render Executive Summary Cards
+  const summaryList = document.getElementById('summary-points-list');
+  summaryList.innerHTML = '';
+
   if (meeting.summary) {
     const bullets = meeting.summary.split('\n').filter(line => line.trim().length > 0);
-    bullets.forEach(bullet => {
-      // Clean leading bullet marks
+    bullets.forEach((bullet, index) => {
       const cleanBullet = bullet.replace(/^-\s*/, '').replace(/^\*\s*/, '').trim();
-      const li = document.createElement('li');
-      li.textContent = cleanBullet;
-      summaryPointsList.appendChild(li);
+      const card = document.createElement('div');
+      card.className = 'summary-point-card';
+      
+      card.innerHTML = `
+        <div class="summary-point-icon">📌</div>
+        <div style="font-family: var(--font-secondary); font-size: 0.95rem; line-height: 1.5; color: var(--text-primary);">${cleanBullet}</div>
+      `;
+      summaryList.appendChild(card);
     });
   } else if (meeting.status === 'processing') {
-    summaryPointsList.innerHTML = `<p style="color: var(--text-secondary); font-style: italic;">Transcribing and analyzing recording. Please wait...</p>`;
+    summaryList.innerHTML = `<p style="color: var(--text-secondary); font-style: italic; text-align: center;">Transcribing audio & analyzing. MOM details will render shortly...</p>`;
   } else {
-    summaryPointsList.innerHTML = `<p style="color: var(--text-secondary); font-style: italic;">No summary generated.</p>`;
+    summaryList.innerHTML = `<p style="color: var(--text-secondary); font-style: italic;">No summary generated.</p>`;
   }
 
-  // Populate MOM Details
+  // Render static MOM values first
   if (meeting.mom) {
     // Attendees
-    momAttendeesList.innerHTML = '';
+    const attList = document.getElementById('mom-attendees-list');
+    attList.innerHTML = '';
     if (meeting.mom.attendees && meeting.mom.attendees.length > 0) {
-      meeting.mom.attendees.forEach(attendee => {
+      meeting.mom.attendees.forEach(att => {
         const pill = document.createElement('span');
         pill.className = 'mom-pill';
-        pill.textContent = attendee;
-        momAttendeesList.appendChild(pill);
+        pill.textContent = att;
+        attList.appendChild(pill);
       });
     } else {
-      momAttendeesList.innerHTML = '<span style="color: var(--text-muted); font-size: 0.9rem; font-style: italic;">None specified</span>';
+      attList.innerHTML = '<span style="color: var(--text-secondary); font-style: italic;">None specified</span>';
     }
 
     // Agenda
-    momAgendaList.innerHTML = '';
+    const agendaList = document.getElementById('mom-agenda-list');
+    agendaList.innerHTML = '';
     if (meeting.mom.agenda && meeting.mom.agenda.length > 0) {
-      meeting.mom.agenda.forEach(agendaItem => {
+      meeting.mom.agenda.forEach(item => {
         const li = document.createElement('li');
-        li.textContent = agendaItem;
-        momAgendaList.appendChild(li);
+        li.textContent = item;
+        agendaList.appendChild(li);
       });
     } else {
-      momAgendaList.innerHTML = '<li style="color: var(--text-muted); font-size: 0.9rem; font-style: italic; list-style: none; padding-left: 0;">None specified</li>';
+      agendaList.innerHTML = '<li style="color: var(--text-secondary); font-style: italic; list-style: none;">None specified</li>';
     }
 
     // Decisions
-    momDecisionsList.innerHTML = '';
+    const decList = document.getElementById('mom-decisions-list');
+    decList.innerHTML = '';
     if (meeting.mom.decisions && meeting.mom.decisions.length > 0) {
-      meeting.mom.decisions.forEach(decision => {
+      meeting.mom.decisions.forEach(item => {
         const li = document.createElement('li');
-        li.textContent = decision;
-        momDecisionsList.appendChild(li);
+        li.textContent = item;
+        decList.appendChild(li);
       });
     } else {
-      momDecisionsList.innerHTML = '<li style="color: var(--text-muted); font-size: 0.9rem; font-style: italic; list-style: none; padding-left: 0;">No decisions recorded</li>';
+      decList.innerHTML = '<li style="color: var(--text-secondary); font-style: italic; list-style: none;">No decisions recorded</li>';
     }
 
-    // Action items (build securely with DOM methods to prevent XSS)
-    momActionsTableBody.innerHTML = '';
-    if (meeting.mom.action_items && meeting.mom.action_items.length > 0) {
-      meeting.mom.action_items.forEach(item => {
-        const tr = document.createElement('tr');
-        
-        const tdTask = document.createElement('td');
-        const strongTask = document.createElement('strong');
-        strongTask.textContent = item.task;
-        tdTask.appendChild(strongTask);
-        
-        const tdOwner = document.createElement('td');
-        const pillOwner = document.createElement('span');
-        pillOwner.className = 'mom-pill';
-        pillOwner.textContent = item.owner || 'Unassigned';
-        tdOwner.appendChild(pillOwner);
-        
-        const tdDeadline = document.createElement('td');
-        tdDeadline.style.color = 'var(--text-secondary)';
-        tdDeadline.textContent = item.deadline || 'N/A';
-        
-        tr.appendChild(tdTask);
-        tr.appendChild(tdOwner);
-        tr.appendChild(tdDeadline);
-        
-        momActionsTableBody.appendChild(tr);
-      });
-    } else {
-      momActionsTableBody.innerHTML = `
-        <tr>
-          <td colspan="3" style="text-align: center; color: var(--text-muted); font-style: italic;">No action items recorded</td>
-        </tr>
-      `;
-    }
-  } else {
-    // Empty state MOM
-    momAttendeesList.innerHTML = '';
-    momAgendaList.innerHTML = '';
-    momDecisionsList.innerHTML = '';
-    momActionsTableBody.innerHTML = `
-      <tr>
-        <td colspan="3" style="text-align: center; color: var(--text-muted); font-style: italic;">MOM will populate once processing completes</td>
-      </tr>
-    `;
+    // Prepopulate static action items fallback
+    renderStaticActionItemsTable(meeting.mom.action_items);
   }
 }
 
-// Tab Switching
-function switchTab(tabName) {
-  // Toggle Active Button
-  const buttons = document.querySelectorAll('.tab-btn');
-  buttons.forEach(btn => {
-    btn.classList.remove('active');
-    if (btn.getAttribute('onclick').includes(tabName)) {
-      btn.classList.add('active');
-    }
-  });
-
-  // Toggle Active Panel
-  const panels = document.querySelectorAll('.tab-panel');
-  panels.forEach(panel => {
-    panel.classList.remove('active');
-  });
-  document.getElementById(`tab-${tabName}`).classList.add('active');
+// Pre-render static table fallback
+function renderStaticActionItemsTable(items) {
+  const tbody = document.getElementById('mom-actions-table-body');
+  tbody.innerHTML = '';
+  if (items && items.length > 0) {
+    items.forEach(item => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><input type="checkbox" disabled style="width: 18px; height: 18px;"></td>
+        <td><strong>${item.task}</strong></td>
+        <td><span class="mom-pill">${item.owner || 'Unassigned'}</span></td>
+        <td style="color: var(--text-secondary);">${item.deadline || 'N/A'}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } else {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-secondary); font-style: italic;">No action items found</td></tr>`;
+  }
 }
 
-// Chat integration
-chatForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const question = chatInput.value.trim();
-  if (!question) return;
+// Fetch interactive action items with DB status & database ids
+async function fetchInteractiveActionItems() {
+  try {
+    const res = await fetchWithAuth(`${API_BASE_URL}/api/v1/action-items?meeting_id=${meetingId}`);
+    if (res.ok) {
+      const items = await res.json();
+      if (items.length > 0) {
+        renderInteractiveActionItemsTable(items);
+      }
+    }
+  } catch (err) {
+    console.error("Failed to load interactive action items:", err);
+  }
+}
 
-  // Append user bubble
-  appendChatBubble(question, 'user');
-  chatInput.value = '';
-  
-  // Disable input during loader
-  const inputEl = document.getElementById('chat-input');
-  const sendBtn = document.getElementById('chat-send-btn');
-  inputEl.disabled = true;
-  sendBtn.disabled = true;
+// Render action items list with live toggles
+function renderInteractiveActionItemsTable(items) {
+  const tbody = document.getElementById('mom-actions-table-body');
+  tbody.innerHTML = '';
 
-  // Append loading placeholder bubble
-  const loadingBubble = appendChatBubble('Thinking...', 'assistant');
+  items.forEach(item => {
+    const tr = document.createElement('tr');
+    const isChecked = item.status === 'done';
+    
+    tr.innerHTML = `
+      <td><input type="checkbox" class="task-toggle" data-id="${item.id}" ${isChecked ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer;"></td>
+      <td class="task-text" style="${isChecked ? 'text-decoration: line-through; opacity: 0.6;' : ''}"><strong>${item.task}</strong></td>
+      <td><span class="mom-pill">${item.owner || 'Unassigned'}</span></td>
+      <td style="color: var(--text-secondary);">${item.deadline || 'N/A'}</td>
+    `;
+
+    const checkbox = tr.querySelector('.task-toggle');
+    const textCell = tr.querySelector('.task-text');
+
+    checkbox.addEventListener('change', async () => {
+      const newStatus = checkbox.checked ? 'done' : 'pending';
+      textCell.style.textDecoration = checkbox.checked ? 'line-through' : 'none';
+      textCell.style.opacity = checkbox.checked ? '0.6' : '1';
+
+      try {
+        const patchRes = await fetchWithAuth(`${API_BASE_URL}/api/v1/action-items/${item.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: newStatus })
+        });
+        if (patchRes.ok) {
+          showToast(newStatus === 'done' ? "Task marked done!" : "Task marked pending.");
+        } else {
+          throw new Error();
+        }
+      } catch (err) {
+        showToast("Error updating task status.");
+        checkbox.checked = !checkbox.checked;
+        textCell.style.textDecoration = checkbox.checked ? 'line-through' : 'none';
+        textCell.style.opacity = checkbox.checked ? '0.6' : '1';
+      }
+    });
+
+    tbody.appendChild(tr);
+  });
+}
+
+// Rename Meeting Title
+function toggleEditTitle(show) {
+  document.getElementById('title-display-container').style.display = show ? 'none' : 'flex';
+  document.getElementById('title-edit-container').style.display = show ? 'flex' : 'none';
+}
+
+async function saveMeetingTitle() {
+  const newTitle = document.getElementById('meeting-title-input').value.trim();
+  if (!newTitle) {
+    showToast("Title cannot be empty.");
+    return;
+  }
 
   try {
-    const response = await fetchWithAuth(`${API_BASE_URL}/api/v1/qa/${meetingId}?q=${encodeURIComponent(question)}`);
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.detail || 'Q&A request failed.');
+    const res = await fetchWithAuth(`${API_BASE_URL}/api/v1/meetings/${meetingId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: newTitle })
+    });
+    if (res.ok) {
+      document.getElementById('meeting-title').textContent = newTitle;
+      currentMeeting.title = newTitle;
+      toggleEditTitle(false);
+      showToast("Meeting renamed successfully.");
+    } else {
+      throw new Error();
     }
-
-    loadingBubble.textContent = data.answer;
-
   } catch (err) {
-    loadingBubble.textContent = `Error: ${err.message}`;
-    loadingBubble.style.color = 'var(--accent-danger)';
+    showToast("Failed to rename meeting.");
+  }
+}
+
+// Share Modal Operations
+function openShareModal() {
+  if (!currentMeeting) return;
+  
+  const modal = document.getElementById('share-modal');
+  const toggle = document.getElementById('public-toggle');
+  
+  toggle.checked = currentMeeting.is_public || false;
+  updateShareUI();
+  modal.style.display = 'flex';
+}
+
+function closeShareModal() {
+  document.getElementById('share-modal').style.display = 'none';
+}
+
+function updateShareUI() {
+  const toggle = document.getElementById('public-toggle');
+  const container = document.getElementById('public-link-container');
+  
+  if (toggle.checked) {
+    container.style.display = 'block';
+    
+    // Generate public URL
+    const slug = currentMeeting.public_slug || '';
+    const shareUrl = `${window.location.origin}/share.html?slug=${slug}`;
+    document.getElementById('share-url-input').value = shareUrl;
+    
+    // WhatsApp social configuration
+    const waBtn = document.getElementById('share-whatsapp-btn');
+    const waText = encodeURIComponent(`Here are the AI minutes & action items for "${currentMeeting.title}": ${shareUrl}`);
+    waBtn.onclick = () => window.open(`https://api.whatsapp.com/send?text=${waText}`, '_blank');
+    
+    // Email configuration
+    const mailBtn = document.getElementById('share-email-btn');
+    const mailSubject = encodeURIComponent(`Meeting MOM: ${currentMeeting.title}`);
+    const mailBody = encodeURIComponent(`Hi team,\n\nI have generated the Minutes of Meeting (MOM) and action items using MeetMind AI. You can access the complete breakdown here:\n${shareUrl}`);
+    mailBtn.onclick = () => window.location.href = `mailto:?subject=${mailSubject}&body=${mailBody}`;
+    
+  } else {
+    container.style.display = 'none';
+  }
+}
+
+// Toggle public share state
+document.getElementById('public-toggle').addEventListener('change', async () => {
+  const toggle = document.getElementById('public-toggle');
+  const isPublic = toggle.checked;
+  
+  try {
+    const res = await fetchWithAuth(`${API_BASE_URL}/api/v1/meetings/${meetingId}/public`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_public: isPublic })
+    });
+    
+    if (res.ok) {
+      const data = await res.json();
+      currentMeeting.is_public = data.is_public;
+      currentMeeting.public_slug = data.public_slug;
+      updateShareUI();
+      showToast(isPublic ? "Meeting summary is now public!" : "Meeting summary is now private.");
+    } else {
+      throw new Error();
+    }
+  } catch (err) {
+    showToast("Error updating public accessibility.");
+    toggle.checked = !isPublic;
+  }
+});
+
+// Copy link click handler
+document.getElementById('copy-share-url-btn').addEventListener('click', () => {
+  const urlInput = document.getElementById('share-url-input');
+  navigator.clipboard.writeText(urlInput.value).then(() => {
+    const btn = document.getElementById('copy-share-url-btn');
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy Link', 2000);
+  });
+});
+
+// Chat submission
+document.getElementById('chat-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const input = document.getElementById('chat-input');
+  const query = input.value.trim();
+  if (!query) return;
+
+  appendChatBubble(query, 'user');
+  input.value = '';
+
+  const sendBtn = document.getElementById('chat-send-btn');
+  input.disabled = true;
+  sendBtn.disabled = true;
+
+  const thinking = appendChatBubble('Thinking...', 'assistant');
+
+  try {
+    const response = await fetchWithAuth(`${API_BASE_URL}/api/v1/qa/${meetingId}?q=${encodeURIComponent(query)}`);
+    const data = await response.json();
+    if (response.ok) {
+      thinking.textContent = data.answer;
+    } else {
+      throw new Error(data.detail || "Request failed.");
+    }
+  } catch (err) {
+    thinking.textContent = `Error getting answer: ${err.message}`;
+    thinking.style.color = 'var(--error)';
   } finally {
-    inputEl.disabled = false;
+    input.disabled = false;
     sendBtn.disabled = false;
-    inputEl.focus();
+    input.focus();
   }
 });
 
 function appendChatBubble(text, sender) {
+  const container = document.getElementById('chat-messages');
   const bubble = document.createElement('div');
   bubble.className = `chat-bubble ${sender}`;
   bubble.textContent = text;
-  chatMessages.appendChild(bubble);
-  chatMessages.scrollTop = chatMessages.scrollHeight; // Scroll to bottom
+  container.appendChild(bubble);
+  container.scrollTop = container.scrollHeight;
   return bubble;
 }
 
-// Export files without pro check
-async function exportMeetingMinutes(type) {
+// Export functions
+async function exportReport(type) {
+  const btn = document.getElementById(`export-${type}-btn`);
+  btn.disabled = true;
+  btn.textContent = 'Exporting...';
+  
   try {
-    const response = await fetchWithAuth(`${API_BASE_URL}/api/v1/meetings/${meetingId}/export/${type}`);
+    const res = await fetchWithAuth(`${API_BASE_URL}/api/v1/meetings/${meetingId}/export/${type}`);
+    if (!res.ok) throw new Error();
     
-    if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.detail || `Export to ${type.toUpperCase()} failed.`);
-    }
-    
-    const blob = await response.blob();
-    const blobUrl = window.URL.createObjectURL(blob);
-    
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = blobUrl;
-    a.download = `meeting_mom_${meetingId}.${type}`;
+    a.href = url;
+    a.download = `${currentMeeting.title.replace(/\s+/g, '_')}_MOM.${type}`;
     document.body.appendChild(a);
     a.click();
-    
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(blobUrl);
+    a.remove();
+    window.URL.revokeObjectURL(url);
+    showToast(`${type.toUpperCase()} file downloaded successfully.`);
   } catch (err) {
-    alert(`Export failed: ${err.message}`);
+    showToast(`Failed to export ${type.toUpperCase()}.`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = `Export ${type.toUpperCase()}`;
   }
 }
 
-exportPdfBtn.addEventListener('click', () => exportMeetingMinutes('pdf'));
-exportDocxBtn.addEventListener('click', () => exportMeetingMinutes('docx'));
+document.getElementById('export-pdf-btn').addEventListener('click', () => exportReport('pdf'));
+document.getElementById('export-docx-btn').addEventListener('click', () => exportReport('docx'));
 
-// Fetch User Profile to populate user badge
+// Check user profile
 async function fetchUserProfile() {
   try {
     const response = await fetchWithAuth(`${API_BASE_URL}/api/v1/auth/profile`);
@@ -442,140 +537,15 @@ async function fetchUserProfile() {
       const data = await response.json();
       const userDisplay = document.getElementById('user-display');
       if (userDisplay) {
-        const user = getLoggedInUser();
-        const email = (user && user.email) || data.email || 'User';
-        userDisplay.textContent = `${email} [Beta User — Full Access]`;
+        userDisplay.textContent = data.email || 'User';
       }
     }
-  } catch (err) {
-    console.error("Error checking profile:", err);
-  }
-}
-
-// Feedback Widget Modal logic
-let selectedRating = 0;
-const feedbackModal = document.getElementById('feedback-modal');
-const feedbackWidgetBtn = document.getElementById('feedback-widget-btn');
-const closeFeedbackModal = document.getElementById('close-feedback-modal');
-const submitFeedbackBtn = document.getElementById('submit-feedback-btn');
-const stars = document.querySelectorAll('.feedback-star');
-
-if (feedbackWidgetBtn) {
-  feedbackWidgetBtn.addEventListener('click', () => {
-    selectedRating = 0;
-    stars.forEach(s => s.style.color = 'var(--text-muted)');
-    document.getElementById('feedback-message').value = '';
-    document.getElementById('feedback-alert').style.display = 'none';
-    document.getElementById('feedback-success').style.display = 'none';
-    feedbackModal.style.display = 'flex';
-  });
-}
-
-if (closeFeedbackModal) {
-  closeFeedbackModal.addEventListener('click', () => {
-    feedbackModal.style.display = 'none';
-  });
-}
-
-stars.forEach(star => {
-  star.addEventListener('mouseover', () => {
-    const rating = parseInt(star.getAttribute('data-rating'));
-    stars.forEach(s => {
-      if (parseInt(s.getAttribute('data-rating')) <= rating) {
-        s.style.color = '#F59E0B';
-      } else {
-        s.style.color = 'var(--text-muted)';
-      }
-    });
-  });
-  star.addEventListener('mouseout', () => {
-    stars.forEach(s => {
-      if (parseInt(s.getAttribute('data-rating')) <= selectedRating) {
-        s.style.color = '#F59E0B';
-      } else {
-        s.style.color = 'var(--text-muted)';
-      }
-    });
-  });
-  star.addEventListener('click', () => {
-    selectedRating = parseInt(star.getAttribute('data-rating'));
-  });
-});
-
-if (submitFeedbackBtn) {
-  submitFeedbackBtn.addEventListener('click', async () => {
-    if (selectedRating === 0) {
-      const alertEl = document.getElementById('feedback-alert');
-      alertEl.textContent = 'Please select a star rating.';
-      alertEl.style.display = 'block';
-      return;
-    }
-    const message = document.getElementById('feedback-message').value;
-    const successEl = document.getElementById('feedback-success');
-    const alertEl = document.getElementById('feedback-alert');
-    
-    alertEl.style.display = 'none';
-    submitFeedbackBtn.disabled = true;
-    submitFeedbackBtn.textContent = 'Submitting...';
-    
-    try {
-      const url = `${API_BASE_URL}/api/v1/stats/feedback?rating=${selectedRating}&message=${encodeURIComponent(message)}&page=meeting`;
-      const res = await fetchWithAuth(url, { method: 'POST' });
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.detail || 'Failed to submit feedback.');
-      }
-      successEl.textContent = 'Thank you for your feedback!';
-      successEl.style.display = 'block';
-      setTimeout(() => {
-        feedbackModal.style.display = 'none';
-      }, 1500);
-    } catch (err) {
-      alertEl.textContent = err.message;
-      alertEl.style.display = 'block';
-    } finally {
-      submitFeedbackBtn.disabled = false;
-      submitFeedbackBtn.textContent = 'Submit Feedback';
-    }
-  });
-}
-
-function showMessage(msg) {
-  let msgEl = document.getElementById('cold-start-warning');
-  if (!msgEl) {
-    msgEl = document.createElement('div');
-    msgEl.id = 'cold-start-warning';
-    msgEl.style.padding = '0.75rem 1rem';
-    msgEl.style.borderRadius = 'var(--radius-sm)';
-    msgEl.style.fontSize = '0.9rem';
-    msgEl.style.marginBottom = '1.25rem';
-    msgEl.style.background = 'rgba(59, 130, 246, 0.15)';
-    msgEl.style.border = '1px solid rgba(59, 130, 246, 0.25)';
-    msgEl.style.color = '#93C5FD';
-    
-    const wrapper = document.querySelector('.meeting-detail-wrapper');
-    const header = document.querySelector('.meeting-header');
-    if (wrapper && header) {
-      wrapper.insertBefore(msgEl, header);
-    }
-  }
-  msgEl.textContent = msg;
-  msgEl.style.display = 'block';
-}
-
-function hideMessage() {
-  const msgEl = document.getElementById('cold-start-warning');
-  if (msgEl) {
-    msgEl.style.display = 'none';
-  }
+  } catch (e) {}
 }
 
 // Initialization
 document.addEventListener('DOMContentLoaded', () => {
   meetingId = getMeetingIdFromURL();
-  pollStartTime = Date.now();
-  showMessage("Processing your meeting... this may take 30-60 seconds on first load");
   fetchUserProfile();
   fetchMeetingDetails();
 });
-

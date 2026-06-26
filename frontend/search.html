@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' http://localhost:8000 https://meetmind-backend-90u7.onrender.com;">
+  <title>Search Meetings — MeetMind</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .search-layout {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      width: 280px;
+      background: rgba(13, 13, 26, 0.65);
+      border-right: 1px solid var(--glass-border);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      padding: 2.5rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: fixed;
+      top: 0; bottom: 0; left: 0;
+      z-index: 100;
+    }
+
+    .main-content {
+      margin-left: 280px;
+      flex-grow: 1;
+      padding: 3rem;
+      position: relative;
+      z-index: 10;
+      max-width: 1200px;
+    }
+
+    @media (max-width: 900px) {
+      .sidebar {
+        width: 80px;
+        padding: 2rem 0.5rem;
+        align-items: center;
+      }
+      .sidebar .logo span, .sidebar .sidebar-link span:not(.icon), .sidebar .beta-tag {
+        display: none;
+      }
+      .sidebar .logo {
+        justify-content: center;
+        margin-bottom: 2rem;
+      }
+      .main-content {
+        margin-left: 80px;
+        padding: 2rem 1rem;
+      }
+    }
+
+    .sidebar-link {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.85rem 1.25rem;
+      color: var(--text-secondary);
+      border-radius: var(--radius-sm);
+      font-weight: 500;
+      transition: var(--transition);
+      margin-bottom: 0.5rem;
+    }
+
+    .sidebar-link:hover, .sidebar-link.active {
+      color: white;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+    }
+
+    .sidebar-link .icon {
+      font-size: 1.25rem;
+    }
+
+    .search-input-wrapper {
+      position: relative;
+      margin-bottom: 2.5rem;
+      max-width: 800px;
+    }
+
+    .search-input-field {
+      width: 100%;
+      padding: 1.25rem 3rem 1.25rem 1.5rem;
+      font-size: 1.15rem;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-md);
+      color: white;
+      outline: none;
+      transition: var(--transition);
+    }
+
+    .search-input-field:focus {
+      border-color: var(--accent);
+      box-shadow: var(--accent-glow);
+    }
+
+    .shortcut-badge {
+      position: absolute;
+      right: 1.5rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--glass-border);
+      padding: 2px 8px;
+      border-radius: 4px;
+      pointer-events: none;
+    }
+
+    /* Search Result Cards */
+    .search-results-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      max-width: 900px;
+    }
+
+    .search-result-card {
+      padding: 2rem;
+      cursor: pointer;
+    }
+
+    .search-result-card:hover {
+      transform: translateY(-3px);
+    }
+
+    .match-snippet {
+      font-family: var(--font-secondary);
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      background: rgba(0,0,0,0.25);
+      border: 1px solid var(--glass-border);
+      padding: 1rem 1.5rem;
+      border-radius: var(--radius-sm);
+      margin-top: 1rem;
+    }
+
+    .match-snippet mark {
+      background: rgba(79, 142, 247, 0.35);
+      color: white;
+      font-weight: 700;
+      border-radius: 2px;
+      padding: 0 2px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Ambient background orbs -->
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+
+  <!-- Toast system -->
+  <div id="toast" class="toast"></div>
+
+  <div class="search-layout">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div>
+        <a href="index.html" class="logo" style="margin-bottom: 3rem; display: flex;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+          Meet<span>Mind</span>
+        </a>
+        
+        <nav>
+          <a href="recorder.html" class="sidebar-link">
+            <span class="icon">🎙️</span>
+            <span>Record Meeting</span>
+          </a>
+          <a href="dashboard.html" class="sidebar-link">
+            <span class="icon">📤</span>
+            <span>Upload Recording</span>
+          </a>
+          <a href="search.html" class="sidebar-link active">
+            <span class="icon">🔍</span>
+            <span>Search Syncs</span>
+          </a>
+          <a href="dashboard.html#action-items-tracker" class="sidebar-link">
+            <span class="icon">✅</span>
+            <span>Action Items</span>
+          </a>
+        </nav>
+      </div>
+
+      <div>
+        <div class="beta-tag" style="padding: 0.6rem; background: var(--accent-soft); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); margin-bottom: 1.5rem; text-align: center;">
+          <span style="font-size: 0.75rem; font-weight: 700; color: var(--accent); letter-spacing: 0.5px;">BETA MEMBER 🚀</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+          <span id="user-display" style="font-size: 0.85rem; color: var(--text-secondary); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
+          <a href="#" id="logout-btn" style="font-size: 0.85rem; color: var(--error); font-weight: 600;">Log Out →</a>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <div style="margin-bottom: 2.5rem;">
+        <h2 style="font-size: 2.25rem; font-weight: 800;">Cross-Meeting Search</h2>
+        <p style="color: var(--text-secondary); margin-top: 0.25rem;">Query keyword or phrases across all transcripts and action items in your workspace.</p>
+      </div>
+
+      <!-- Search Box -->
+      <div class="search-input-wrapper">
+        <input type="text" id="search-input" class="search-input-field" placeholder="Search transcripts, action items, or meeting titles..." autofocus autocomplete="off">
+        <span class="shortcut-badge">/</span>
+      </div>
+
+      <!-- Results Grid -->
+      <div id="search-empty-state" style="text-align: center; padding: 4rem 1rem; color: var(--text-secondary);">
+        <p style="font-size: 1.1rem;" id="search-message">Enter query keywords to search across your workspace.</p>
+      </div>
+
+      <div class="search-results-container" id="search-results">
+        <!-- Rendered dynamically -->
+      </div>
+    </main>
+  </div>
+
+  <script src="js/shortcuts.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/search.js"></script>
+</body>
+</html>

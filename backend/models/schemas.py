@@ -43,6 +43,10 @@ class MeetingResponse(BaseModel):
     summary: Optional[str] = None
     created_at: datetime
     status: MeetingStatus
+    is_public: Optional[bool] = False
+    public_slug: Optional[str] = None
+    duration: Optional[int] = 0
+
 
 
 import re

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' http://localhost:8000 https://meetmind-backend-90u7.onrender.com;">
+  <title>Shared Meeting Summary — MeetMind</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .share-container {
+      position: relative;
+      z-index: 10;
+      max-width: 900px;
+      margin: 2.5rem auto;
+      padding: 0 1.5rem;
+    }
+
+    .share-header-card {
+      padding: 2.5rem;
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+
+    .tabs-wrapper {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--glass-border);
+      padding-bottom: 0.5rem;
+    }
+
+    .tab-trigger {
+      padding: 0.75rem 1.5rem;
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      border-radius: var(--radius-sm);
+    }
+
+    .tab-trigger:hover {
+      color: white;
+      background: var(--glass-bg);
+    }
+
+    .tab-trigger.active {
+      color: white;
+      background: var(--accent-soft);
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--accent-glow);
+    }
+
+    .tab-content-panel {
+      display: none;
+    }
+
+    .tab-content-panel.active {
+      display: block;
+    }
+
+    .summary-cards-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .summary-point-card {
+      padding: 1.5rem;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+    }
+
+    .viral-branding-card {
+      margin-top: 3.5rem;
+      padding: 2.5rem;
+      text-align: center;
+      background: linear-gradient(135deg, rgba(79, 142, 247, 0.1), rgba(139, 92, 246, 0.1));
+      border: 1px solid var(--glass-border);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Ambient background orbs -->
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+
+  <!-- Header -->
+  <header style="background: rgba(8, 8, 16, 0.7); backdrop-filter: blur(20px); border-bottom: 1px solid var(--glass-border); position: relative; z-index: 100;">
+    <div class="nav-container" style="display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 5%;">
+      <a href="index.html" class="logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+        Meet<span>Mind</span>
+      </a>
+      <div>
+        <a href="signup.html" class="btn btn-primary" style="padding: 0.5rem 1.25rem;">Create Free Account</a>
+      </div>
+    </div>
+  </header>
+
+  <div class="share-container">
+    <!-- Header info -->
+    <div class="glass-card share-header-card">
+      <div style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.5rem;" id="meeting-date">Shared Report</div>
+      <h2 id="meeting-title" style="font-size: 2rem; font-weight: 800; margin: 0;">Loading Summary Report...</h2>
+    </div>
+
+    <!-- Error container -->
+    <div id="share-error" class="alert alert-danger" style="display: none; margin-bottom: 2rem;"></div>
+
+    <div id="share-content" style="display: none;">
+      <!-- Tabs -->
+      <div class="tabs-wrapper">
+        <button class="tab-trigger active" onclick="switchTab('summary')">Executive Summary</button>
+        <button class="tab-trigger" onclick="switchTab('mom')">MOM Document</button>
+      </div>
+
+      <!-- Tab 1: Executive Summary -->
+      <div id="tab-summary" class="tab-content-panel active">
+        <div class="summary-cards-grid" id="summary-points-list">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- Tab 2: MOM Document -->
+      <div id="tab-mom" class="tab-content-panel">
+        <div class="glass-card" style="padding: 2.5rem; display: flex; flex-direction: column; gap: 2.5rem;">
+          <!-- Attendees -->
+          <div>
+            <h4 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.75rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem; color: var(--accent);">👥 ATTENDEES</h4>
+            <div id="mom-attendees-list" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+
+          <!-- Agenda -->
+          <div>
+            <h4 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.75rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem; color: var(--accent);">🎯 MEETING AGENDA</h4>
+            <ul id="mom-agenda-list" class="bullet-list" style="margin-left: 1.5rem;">
+              <!-- Populated dynamically -->
+            </ul>
+          </div>
+
+          <!-- Decisions -->
+          <div>
+            <h4 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.75rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem; color: var(--accent);">💡 DECISIONS MADE</h4>
+            <ul id="mom-decisions-list" class="bullet-list" style="margin-left: 1.5rem;">
+              <!-- Populated dynamically -->
+            </ul>
+          </div>
+
+          <!-- Action Items Table (Read-only) -->
+          <div>
+            <h4 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem; color: var(--accent);">✅ ACTION ITEMS</h4>
+            <div style="overflow-x: auto;">
+              <table class="mom-table">
+                <thead>
+                  <tr>
+                    <th>Task Description</th>
+                    <th>Assignee</th>
+                    <th>Deadline</th>
+                  </tr>
+                </thead>
+                <tbody id="mom-actions-table-body">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Viral branding card -->
+      <div class="glass-card viral-branding-card">
+        <h3 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 0.5rem; background: linear-gradient(135deg, var(--accent), var(--purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">MOM Written Instantly by MeetMind AI</h3>
+        <p style="color: var(--text-secondary); max-width: 600px; margin: 0 auto 2rem; font-size: 0.95rem; line-height: 1.5;">Never take meeting notes manually again. Record syncs, upload files, or paste raw transcripts directly inside the browser. Free forever.</p>
+        <a href="signup.html" class="btn btn-primary" style="padding: 0.8rem 2rem; font-size: 1rem;">Create Your Free Account Today</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Global Configurations
+    const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:8000'
+      : 'https://meetmind-backend-90u7.onrender.com';
+  </script>
+  <script src="js/share.js"></script>
+</body>
+</html>

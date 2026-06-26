@@ -6,11 +6,22 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' http://localhost:8000 https://meetmind-backend-90u7.onrender.com;">
   <title>Sign Up — MeetMind</title>
   <link rel="stylesheet" href="css/style.css">
+  <style>
+    .auth-wrapper {
+      position: relative;
+      z-index: 10;
+    }
+  </style>
 </head>
 <body>
 
-  <header>
-    <div class="nav-container">
+  <!-- Ambient background orbs -->
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+
+  <!-- Navigation -->
+  <header style="background: rgba(8, 8, 16, 0.7); backdrop-filter: blur(20px); border-bottom: 1px solid var(--glass-border); position: relative; z-index: 100;">
+    <div class="nav-container" style="display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 5%;">
       <a href="index.html" class="logo">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
         Meet<span>Mind</span>
@@ -20,12 +31,12 @@
 
   <div class="auth-wrapper">
     <div class="auth-card glass-card">
-      <div style="background: rgba(79, 142, 247, 0.1); border: 1px solid rgba(79, 142, 247, 0.25); color: #4F8EF7; padding: 0.75rem 1rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem; font-size: 0.85rem; font-weight: 500; text-align: left;">
-        🎁 <strong>Beta Member Benefits:</strong>
+      <div style="background: var(--accent-soft); border: 1px solid var(--glass-border); color: var(--accent); padding: 0.75rem 1rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem; font-size: 0.85rem; font-weight: 500; text-align: left;">
+        🎁 <strong>Free Lifetime Access:</strong>
         <ul style="margin-left: 1.25rem; margin-top: 0.25rem; font-size: 0.8rem; line-height: 1.4;">
           <li>Unlimited audio uploads & analysis</li>
           <li>All export options unlocked (PDF/DOCX)</li>
-          <li>Free access lifetime priority tier</li>
+          <li>No credit cards, 100% free forever</li>
         </ul>
       </div>
 
@@ -65,15 +76,11 @@
       <div style="margin-top: 1.5rem; border-top: 1px solid var(--border-subtle); padding-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.8rem; color: var(--text-secondary);">
         <div style="display: flex; align-items: center; gap: 0.5rem;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-          No credit card required
+          No payment info required
         </div>
         <div style="display: flex; align-items: center; gap: 0.5rem;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-          Instant account setup — start processing in 30 seconds
-        </div>
-        <div style="display: flex; align-items: center; gap: 0.5rem;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-          Secure SSL encryption & GDPL data compliance
+          Instant account setup — start in 30 seconds
         </div>
       </div>
 
@@ -85,16 +92,12 @@
 
   <script src="js/auth.js"></script>
   <script>
-    // Read ref parameter from URL on page load and store in sessionStorage
     const urlParams = new URLSearchParams(window.location.search);
     const refCode = urlParams.get('ref');
     if (refCode) {
       sessionStorage.setItem('referral_code', refCode);
     }
 
-
-
-    // Password strength listener
     const passwordInput = document.getElementById('password');
     const strengthContainer = document.getElementById('strength-container');
     const strengthBar = document.getElementById('strength-bar');
@@ -123,17 +126,16 @@
         strengthText.textContent = 'Weak';
         strengthText.style.color = '#EF4444';
       } else if (score <= 4) {
-        strengthBar.style.backgroundColor = '#F59E0B';
+        strengthBar.style.backgroundColor = '#FBBF24';
         strengthText.textContent = 'Medium';
-        strengthText.style.color = '#F59E0B';
+        strengthText.style.color = '#FBBF24';
       } else {
-        strengthBar.style.backgroundColor = '#10B981';
+        strengthBar.style.backgroundColor = '#34D399';
         strengthText.textContent = 'Strong';
-        strengthText.style.color = '#10B981';
+        strengthText.style.color = '#34D399';
       }
     });
 
-    // Form submission
     document.getElementById('signup-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       
@@ -146,7 +148,6 @@
       errorAlert.style.display = 'none';
       successAlert.style.display = 'none';
 
-      // Inline validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
         errorAlert.textContent = 'Please enter a valid email address.';
@@ -194,7 +195,7 @@
         
         setTimeout(() => {
           window.location.href = 'login.html';
-        }, 2000);
+        }, 1500);
       } catch (err) {
         errorAlert.textContent = err.message;
         errorAlert.style.display = 'block';

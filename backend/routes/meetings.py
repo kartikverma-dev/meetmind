@@ -91,12 +91,33 @@ def _validate_extension(filename: str) -> str:
     return ext
 
 
+from pydantic import BaseModel
+
+# Models for additional meeting routes
+class PasteTranscriptRequest(BaseModel):
+    title: str
+    transcript: str
+
+class UpdateMeetingRequest(BaseModel):
+    title: str
+
+class PublicToggleRequest(BaseModel):
+    is_public: bool
+
+class SearchResultResponse(BaseModel):
+    id: UUID
+    title: str
+    snippet: str
+    created_at: str
+
+
 @router.post("/upload", response_model=MeetingUploadResponse)
 @limiter.limit(LIMIT_UPLOAD)
 async def upload_meeting(
     request: Request,
     file: UploadFile = File(...),
     title: str = Form(default="Untitled Meeting"),
+    language: str = Form(default="auto"),
     current_user = Depends(get_current_user),
     profile = Depends(check_limits),
 ):
@@ -174,7 +195,7 @@ async def upload_meeting(
             "agenda": ["MeetMind feature overview", "Local Whisper performance verification"],
             "decisions": ["Integrate mock fallback for clean local previewing"],
             "action_items": [
-                {"task": "Complete frontend validation tests", "owner": "Demo User", "deadline": "Today"}
+                {"task": "Complete frontend validation tests", "owner": "Demo User", "deadline": "Today", "status": "pending"}
             ]
         }
         new_mock_meeting = {
@@ -185,7 +206,10 @@ async def upload_meeting(
             "mom": mock_mom_data,
             "summary": f"- User successfully uploaded their recording.\n- Local Whisper completed transcribing the audio data.\n- Gemini generated structured Minutes of Meeting (MOM) schema.\n- Executive summary items were extracted.\n- MeetMind successfully stored the meeting details.",
             "created_at": datetime.now(timezone.utc).isoformat(),
-            "status": "done"
+            "status": "done",
+            "duration": 180,
+            "is_public": False,
+            "public_slug": None
         }
         MOCK_MEETINGS.append(new_mock_meeting)
         if target_path.exists():
@@ -262,9 +286,9 @@ async def upload_meeting(
                 detail=f"Audio too long. { 'Pro' if is_pro else 'Free' } tier max is {limit_msg}."
             )
 
-        # Transcribe audio using local Whisper
+        # Transcribe audio using local Whisper with selected language
         try:
-            transcript = await transcribe_audio(str(target_path))
+            transcript = await transcribe_audio(str(target_path), language=language)
         except Exception as trans_exc:
             logger.error("Whisper transcription failed: %s", trans_exc)
             raise HTTPException(
@@ -298,9 +322,26 @@ async def upload_meeting(
                     "mom": mom.model_dump(),
                     "summary": summary,
                     "status": MeetingStatus.DONE.value,
+                    "duration": int(duration),
                 }
             ).eq("id", meeting_id).execute
         )
+
+        # Insert action items
+        if mom.action_items:
+            action_rows = []
+            for item in mom.action_items:
+                action_rows.append({
+                    "meeting_id": meeting_id,
+                    "user_id": resolved_user_id,
+                    "task": item.task,
+                    "owner": item.owner,
+                    "deadline": item.deadline,
+                    "status": "pending"
+                })
+            await run_db_query(
+                supabase.table("action_items").insert(action_rows).execute
+            )
 
         return MeetingUploadResponse(
             id=UUID(meeting_id),
@@ -333,6 +374,323 @@ async def upload_meeting(
                 logger.error("Failed to delete temp file: %s", unlink_exc)
 
 
+@router.get("/search", response_model=list[SearchResultResponse])
+async def search_meetings(
+    q: str,
+    current_user = Depends(get_current_user)
+):
+    """Search for keywords in meeting titles or transcripts."""
+    settings = get_settings()
+    resolved_user_id = str(current_user.id)
+    query = q.strip().lower()
+
+    if settings.mock_mode:
+        results = []
+        for m in MOCK_MEETINGS:
+            if str(m["user_id"]) != resolved_user_id:
+                continue
+            title_match = query in m.get("title", "").lower()
+            transcript_match = query in m.get("transcript", "").lower()
+            
+            if title_match or transcript_match:
+                # Extract snippet
+                snippet = ""
+                tr = m.get("transcript", "")
+                idx = tr.lower().find(query)
+                if idx != -1:
+                    start = max(0, idx - 60)
+                    end = min(len(tr), idx + len(query) + 60)
+                    snippet = ("..." if start > 0 else "") + tr[start:end] + ("..." if end < len(tr) else "")
+                else:
+                    snippet = m.get("summary", "")[:120] + "..."
+                    
+                results.append(
+                    SearchResultResponse(
+                        id=UUID(m["id"]),
+                        title=m.get("title", "Untitled Meeting"),
+                        snippet=snippet,
+                        created_at=m.get("created_at")
+                    )
+                )
+        return results
+
+    try:
+        supabase = get_supabase()
+    except SupabaseNotConfiguredError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    try:
+        # Search via ILIKE using OR query
+        db_res = await run_db_query(
+            supabase.table("meetings")
+            .select("id, title, transcript, summary, created_at")
+            .eq("user_id", resolved_user_id)
+            .or_(f"title.ilike.%{query}%,transcript.ilike.%{query}%")
+            .execute
+        )
+        
+        results = []
+        for row in db_res.data:
+            tr = row.get("transcript") or ""
+            idx = tr.lower().find(query)
+            if idx != -1:
+                start = max(0, idx - 60)
+                end = min(len(tr), idx + len(query) + 60)
+                snippet = ("..." if start > 0 else "") + tr[start:end] + ("..." if end < len(tr) else "")
+            else:
+                snippet = (row.get("summary") or "")[:120] + "..."
+                
+            results.append(
+                SearchResultResponse(
+                    id=UUID(row["id"]),
+                    title=row["title"],
+                    snippet=snippet,
+                    created_at=row["created_at"]
+                )
+            )
+        return results
+    except Exception as exc:
+        logger.exception("Search failed")
+        raise HTTPException(status_code=500, detail=f"Search failed: {exc}")
+
+
+@router.post("/paste", response_model=MeetingUploadResponse)
+async def paste_transcript(
+    body: PasteTranscriptRequest,
+    current_user = Depends(get_current_user),
+    profile = Depends(check_limits)
+):
+    """Process pasted transcript with Gemini directly."""
+    resolved_user_id = str(current_user.id)
+    title = sanitize_text(body.title, max_length=100)
+    transcript = sanitize_text(body.transcript, max_length=200000)
+
+    if not title or not transcript:
+        raise HTTPException(status_code=400, detail="Title and transcript content are required.")
+
+    # Calculate estimated duration (approx 150 words per minute -> ~10 chars per second)
+    estimated_duration = max(30, round(len(transcript) / 10))
+
+    settings = get_settings()
+    if settings.mock_mode:
+        from routes.auth import MOCK_PROFILES
+        if resolved_user_id in MOCK_PROFILES:
+            MOCK_PROFILES[resolved_user_id]["meetings_used"] += 1
+
+        new_id = str(uuid.uuid4())
+        mock_mom_data = {
+            "attendees": ["Alice", "Bob", "Demo User"],
+            "date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+            "agenda": ["Pasted transcript sync"],
+            "decisions": ["Demonstrate raw text upload"],
+            "action_items": [
+                {"task": "Verify past dashboard sync", "owner": "Demo User", "deadline": "Today", "status": "pending"}
+            ]
+        }
+        new_mock_meeting = {
+            "id": new_id,
+            "user_id": resolved_user_id,
+            "title": title,
+            "transcript": transcript,
+            "mom": mock_mom_data,
+            "summary": f"- User pasted raw meeting transcript.\n- Gemini processed structure elements.\n- Meeting minutes calculated successfully.",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "status": "done",
+            "duration": estimated_duration,
+            "is_public": False,
+            "public_slug": None
+        }
+        MOCK_MEETINGS.append(new_mock_meeting)
+        return MeetingUploadResponse(
+            id=UUID(new_id),
+            status=MeetingStatus.DONE,
+            message="Meeting processed successfully (Mock Mode)"
+        )
+
+    try:
+        supabase = get_supabase()
+    except SupabaseNotConfiguredError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    meeting_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+
+    try:
+        # Process transcript with Gemini
+        mom, summary = await process_transcript(transcript)
+        
+        # Save meeting
+        await run_db_query(
+            supabase.table("meetings").insert(
+                {
+                    "id": meeting_id,
+                    "user_id": resolved_user_id,
+                    "title": title,
+                    "transcript": transcript,
+                    "mom": mom.model_dump(),
+                    "summary": summary,
+                    "created_at": now,
+                    "status": MeetingStatus.DONE.value,
+                    "duration": estimated_duration
+                }
+            ).execute
+        )
+
+        # Insert action items
+        if mom.action_items:
+            action_rows = []
+            for item in mom.action_items:
+                action_rows.append({
+                    "meeting_id": meeting_id,
+                    "user_id": resolved_user_id,
+                    "task": item.task,
+                    "owner": item.owner,
+                    "deadline": item.deadline,
+                    "status": "pending"
+                })
+            await run_db_query(
+                supabase.table("action_items").insert(action_rows).execute
+            )
+
+        # Increment meetings_used count
+        profile_res = await run_db_query(
+            supabase.table("profiles").select("meetings_used").eq("id", resolved_user_id).maybe_single().execute
+        )
+        current_used = profile_res.data.get("meetings_used", 0) if (profile_res and profile_res.data) else 0
+        await run_db_query(
+            supabase.table("profiles").update({"meetings_used": current_used + 1}).eq("id", resolved_user_id).execute
+        )
+
+        return MeetingUploadResponse(
+            id=UUID(meeting_id),
+            status=MeetingStatus.DONE,
+            message="Transcript processed successfully"
+        )
+    except Exception as exc:
+        logger.exception("Pasted transcript processing failed")
+        raise HTTPException(status_code=500, detail=f"Failed to process pasted transcript: {exc}")
+
+
+@router.patch("/{meeting_id}", response_model=MeetingResponse)
+async def patch_meeting(
+    meeting_id: UUID,
+    body: UpdateMeetingRequest,
+    current_user = Depends(get_current_user)
+):
+    """Update meeting details (e.g. title)."""
+    settings = get_settings()
+    resolved_user_id = str(current_user.id)
+
+    if settings.mock_mode:
+        for m in MOCK_MEETINGS:
+            if str(m["id"]) == str(meeting_id) and str(m["user_id"]) == resolved_user_id:
+                m["title"] = body.title
+                mom_data = m.get("mom")
+                mom = MOM.model_validate(mom_data) if mom_data else None
+                return MeetingResponse(
+                    id=UUID(m["id"]),
+                    user_id=UUID(m["user_id"]),
+                    title=m["title"],
+                    transcript=m.get("transcript"),
+                    mom=mom,
+                    summary=m.get("summary"),
+                    created_at=m["created_at"],
+                    status=MeetingStatus(m["status"]),
+                    is_public=m.get("is_public", False),
+                    public_slug=m.get("public_slug"),
+                    duration=m.get("duration", 0)
+                )
+        raise HTTPException(status_code=404, detail="Meeting not found")
+
+    try:
+        supabase = get_supabase()
+    except SupabaseNotConfiguredError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    # Check ownership
+    result = await run_db_query(
+        supabase.table("meetings").select("user_id").eq("id", str(meeting_id)).maybe_single().execute
+    )
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Meeting not found")
+    if str(result.data["user_id"]) != resolved_user_id:
+        raise HTTPException(status_code=403, detail="Permission denied")
+
+    # Update
+    update_res = await run_db_query(
+        supabase.table("meetings").update({"title": body.title}).eq("id", str(meeting_id)).execute
+    )
+    row = update_res.data[0]
+    mom_data = row.get("mom")
+    mom = MOM.model_validate(mom_data) if mom_data else None
+    
+    return MeetingResponse(
+        id=UUID(row["id"]),
+        user_id=UUID(row["user_id"]),
+        title=row["title"],
+        transcript=row.get("transcript"),
+        mom=mom,
+        summary=row.get("summary"),
+        created_at=row["created_at"],
+        status=MeetingStatus(row["status"]),
+        is_public=row.get("is_public", False),
+        public_slug=row.get("public_slug"),
+        duration=row.get("duration", 0)
+    )
+
+
+@router.patch("/{meeting_id}/public")
+async def toggle_public_meeting(
+    meeting_id: UUID,
+    body: PublicToggleRequest,
+    current_user = Depends(get_current_user)
+):
+    """Toggle meeting public visibility. Generates public_slug if set to true."""
+    settings = get_settings()
+    resolved_user_id = str(current_user.id)
+
+    if settings.mock_mode:
+        for m in MOCK_MEETINGS:
+            if str(m["id"]) == str(meeting_id) and str(m["user_id"]) == resolved_user_id:
+                m["is_public"] = body.is_public
+                if body.is_public and not m.get("public_slug"):
+                    m["public_slug"] = f"mock-slug-{uuid.uuid4().hex[:12]}"
+                elif not body.is_public:
+                    m["public_slug"] = None
+                return {"is_public": m["is_public"], "public_slug": m["public_slug"]}
+        raise HTTPException(status_code=404, detail="Meeting not found")
+
+    try:
+        supabase = get_supabase()
+    except SupabaseNotConfiguredError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    # Check ownership
+    result = await run_db_query(
+        supabase.table("meetings").select("user_id, public_slug").eq("id", str(meeting_id)).maybe_single().execute
+    )
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Meeting not found")
+    if str(result.data["user_id"]) != resolved_user_id:
+        raise HTTPException(status_code=403, detail="Permission denied")
+
+    slug = result.data.get("public_slug")
+    if body.is_public and not slug:
+        # Generate new random unique slug
+        slug = uuid.uuid4().hex
+    elif not body.is_public:
+        slug = None
+
+    await run_db_query(
+        supabase.table("meetings")
+        .update({"is_public": body.is_public, "public_slug": slug})
+        .eq("id", str(meeting_id))
+        .execute
+    )
+    
+    return {"is_public": body.is_public, "public_slug": slug}
+
+
 @router.get("", response_model=list[MeetingResponse])
 async def list_meetings(
     current_user = Depends(get_current_user),
@@ -355,6 +713,9 @@ async def list_meetings(
                         summary=row.get("summary"),
                         created_at=row["created_at"],
                         status=MeetingStatus(row["status"]),
+                        is_public=row.get("is_public", False),
+                        public_slug=row.get("public_slug"),
+                        duration=row.get("duration", 0),
                     )
                 )
         return meetings
@@ -386,6 +747,9 @@ async def list_meetings(
                 summary=row.get("summary"),
                 created_at=row["created_at"],
                 status=MeetingStatus(row["status"]),
+                is_public=row.get("is_public", False),
+                public_slug=row.get("public_slug"),
+                duration=row.get("duration", 0),
             )
         )
     return meetings
@@ -424,6 +788,9 @@ async def get_meeting(
             summary=row.get("summary"),
             created_at=row["created_at"],
             status=MeetingStatus(row["status"]),
+            is_public=row.get("is_public", False),
+            public_slug=row.get("public_slug"),
+            duration=row.get("duration", 0),
         )
 
     try:
@@ -462,6 +829,9 @@ async def get_meeting(
         summary=row.get("summary"),
         created_at=row["created_at"],
         status=MeetingStatus(row["status"]),
+        is_public=row.get("is_public", False),
+        public_slug=row.get("public_slug"),
+        duration=row.get("duration", 0),
     )
 
 
