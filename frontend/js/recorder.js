@@ -430,11 +430,8 @@ async function uploadRecording() {
     return;
   }
   
-  // Get auth token - check both storage locations
-  const token = localStorage.getItem("meetmind_token") 
-    || localStorage.getItem("token")
-    || localStorage.getItem("access_token")
-    || getCookie("token");
+  // Get auth token
+  const token = localStorage.getItem("meetmind_token");
   
   console.log("Token found:", token ? "YES" : "NO");
   
