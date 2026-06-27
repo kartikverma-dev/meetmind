@@ -57,28 +57,29 @@ app.add_exception_handler(Exception, global_exception_handler)
 
 settings = get_settings()
 
-# Configure CORS origins - Restrict to exact frontend URL in production
-origins = []
-if settings.frontend_url:
-    origins.append(settings.frontend_url)
+# Add middlewares in proper execution order - CORS must be the first middleware registered
+from fastapi.middleware.cors import CORSMiddleware
 
-env = os.getenv("ENV", "development").lower()
-if env != "production":
-    origins.extend([
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:5173",
-        "http://localhost:8000",
-    ])
-
-# Add middlewares in proper execution order
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=[
+        "https://meetmind-nine.vercel.app",
+        "http://localhost:3000",
+        "http://localhost:5500",
+        "http://127.0.0.1:5500",
+    ],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "Origin",
+        "X-Requested-With",
+        "X-CSRF-Token",
+    ],
+    expose_headers=["Content-Disposition"],
+    max_age=3600,
 )
 
 app.add_middleware(SecurityHeadersMiddleware)
