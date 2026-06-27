@@ -26,7 +26,7 @@ class ActionItemResponse(BaseModel):
     deadline: Optional[str] = None
     status: str
 
-@router.get("/", response_model=List[ActionItemResponse])
+@router.get("", response_model=List[ActionItemResponse])
 async def get_action_items(
     meeting_id: Optional[str] = None,
     current_user = Depends(get_current_user)
@@ -197,6 +197,8 @@ async def update_action_item(
             deadline=updated_row.get("deadline"),
             status=updated_row["status"]
         )
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.exception("Failed to update action item")
         raise HTTPException(status_code=500, detail=f"Database update failed: {exc}")

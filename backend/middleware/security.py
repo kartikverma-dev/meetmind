@@ -119,8 +119,9 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 class SuspiciousActivityMiddleware(BaseHTTPMiddleware):
     """Middleware to scan incoming parameters and bodies for common injection patterns."""
     async def dispatch(self, request: Request, call_next):
-        # Exclude scan for binary files or large uploads
-        if request.url.path == "/meetings/upload":
+        # Exclude scan for binary files, large uploads, or Q&A content inputs
+        path = request.url.path
+        if "/meetings/upload" in path or "/qa" in path:
             return await call_next(request)
             
         ip_address = request.client.host if request.client else "unknown"

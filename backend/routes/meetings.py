@@ -382,6 +382,8 @@ async def search_meetings(
     """Search for keywords in meeting titles or transcripts."""
     settings = get_settings()
     resolved_user_id = str(current_user.id)
+    if not q or not q.strip():
+        raise HTTPException(status_code=400, detail="Search query cannot be empty")
     query = q.strip().lower()
 
     if settings.mock_mode:

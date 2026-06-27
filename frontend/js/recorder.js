@@ -250,22 +250,45 @@ document.getElementById('start-session-btn').addEventListener('click', async () 
     
     // Keep display stream alive for system audio but record only mixed audio to save space
     const audioOnlyStream = new MediaStream(combinedStream.getAudioTracks());
-    let options = { mimeType: 'audio/webm;codecs=opus' };
-    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-      options = { mimeType: 'audio/webm' };
-    }
-    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-      options = {};
-    }
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+      ? 'audio/webm;codecs=opus'
+      : MediaRecorder.isTypeSupported('audio/webm')
+      ? 'audio/webm'
+      : 'audio/ogg';
+
+    console.log("Using mimeType:", mimeType);
+    console.log("Stream obtained:", combinedStream.getTracks().map(t => t.kind));
+
+    mediaRecorder = new MediaRecorder(audioOnlyStream, { mimeType });
     
-    mediaRecorder = new MediaRecorder(audioOnlyStream, options);
-    mediaRecorder.ondataavailable = (e) => {
-      if (e.data && e.data.size > 0) {
-        recordedChunks.push(e.data);
+    mediaRecorder.ondataavailable = (event) => {
+      if (event.data && event.data.size > 0) {
+        recordedChunks.push(event.data);
       }
     };
     
     mediaRecorder.onstop = () => {
+      // Assemble all chunks into one blob
+      const blob = new Blob(recordedChunks, { type: mimeType });
+      
+      // Create object URL from blob
+      const audioURL = URL.createObjectURL(blob);
+      
+      // Set on audio player
+      const audioPlayer = document.getElementById('audio-player');
+      if (audioPlayer) {
+        audioPlayer.src = audioURL;
+        audioPlayer.load();  // ← force reload the element
+      }
+      
+      // Store blob for upload later
+      window.recordedBlob = blob;
+      
+      console.log("Recording size:", blob.size, "bytes");
+      console.log("Recording type:", blob.type);
+      console.log("Chunks collected:", recordedChunks.length);
+      console.log("Total size:", recordedChunks.reduce((a,b) => a + b.size, 0));
+      
       stopTracks();
       prepareReview();
     };
@@ -329,11 +352,14 @@ document.getElementById('stop-btn').addEventListener('click', () => {
 
 // Prepare Review UI
 function prepareReview() {
-  recordedBlob = new Blob(recordedChunks, { type: 'audio/webm' });
+  recordedBlob = window.recordedBlob;
   const audioUrl = URL.createObjectURL(recordedBlob);
   
   const player = document.getElementById('audio-player');
-  player.src = audioUrl;
+  if (player) {
+    player.src = audioUrl;
+    player.load();
+  }
   
   // Set default suggested title
   const dateStr = new Date().toISOString().split('T')[0];
@@ -354,115 +380,137 @@ document.getElementById('discard-btn').addEventListener('click', (e) => {
 function resetRecorder() {
   recordedChunks = [];
   recordedBlob = null;
+  window.recordedBlob = null;
   document.getElementById('review-pane').style.display = 'none';
   document.getElementById('setup-pane').style.display = 'block';
   document.getElementById('timer').textContent = '00:00';
   document.getElementById('live-transcription-box').textContent = 'Speech-to-text preview will appear here as you speak...';
   document.getElementById('upload-progress-container').style.display = 'none';
   const player = document.getElementById('audio-player');
-  player.src = '';
+  if (player) player.src = '';
 }
 
-// Upload & Process recording
-document.getElementById('upload-btn').addEventListener('click', async () => {
-  const title = document.getElementById('meeting-title').value.trim();
-  const language = document.getElementById('language-select').value;
-  
-  if (!title) {
-    showToast("Please enter a meeting title.");
-    return;
-  }
-  
-  if (!recordedBlob) {
-    showToast("No recorded audio available.");
-    return;
-  }
-  
+function showUploadProgress() {
   const uploadBtn = document.getElementById('upload-btn');
+  if (uploadBtn) {
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = 'Uploading...';
+  }
   const progressContainer = document.getElementById('upload-progress-container');
+  if (progressContainer) {
+    progressContainer.style.display = 'block';
+  }
   const progressBar = document.getElementById('upload-progress-bar');
+  if (progressBar) {
+    progressBar.style.width = '100%';
+  }
   const progressPercent = document.getElementById('upload-percent');
+  if (progressPercent) {
+    progressPercent.textContent = 'Processing...';
+  }
+}
+
+function hideUploadProgress() {
+  const uploadBtn = document.getElementById('upload-btn');
+  if (uploadBtn) {
+    uploadBtn.disabled = false;
+    uploadBtn.textContent = 'Process with AI';
+  }
+  const progressContainer = document.getElementById('upload-progress-container');
+  if (progressContainer) {
+    progressContainer.style.display = 'none';
+  }
+}
+
+async function uploadRecording() {
+  const blob = window.recordedBlob;
   
-  uploadBtn.disabled = true;
-  uploadBtn.textContent = 'Uploading...';
-  progressContainer.style.display = 'block';
+  if (!blob || blob.size === 0) {
+    showToast("No recording found. Please record again.");
+    return;
+  }
   
+  // Get auth token - check both storage locations
+  const token = localStorage.getItem("meetmind_token") 
+    || localStorage.getItem("token")
+    || localStorage.getItem("access_token")
+    || getCookie("token");
+  
+  console.log("Token found:", token ? "YES" : "NO");
+  
+  if (!token) {
+    showToast("Session expired. Please login again.");
+    window.location.href = "/login.html";
+    return;
+  }
+  
+  // Get title and language
+  const title = document.getElementById('meeting-title').value 
+    || "Meeting - " + new Date().toLocaleDateString();
+  const language = document.getElementById('language-select').value || "auto";
+  
+  // Build form data
   const formData = new FormData();
-  formData.append('file', recordedBlob, 'recording.webm');
+  
+  // Add file with correct extension based on mimeType
+  const extension = blob.type.includes('ogg') ? 'ogg' : 'webm';
+  formData.append('file', blob, `recording.${extension}`);
   formData.append('title', title);
   formData.append('language', language);
   
-  // Custom XHR to track progress
-  const xhr = new XMLHttpRequest();
-  xhr.open('POST', `${API_BASE_URL}/api/v1/meetings/upload`);
+  const uploadUrl = (typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : "https://meetmind-backend-90u7.onrender.com") + "/api/v1/meetings/upload";
+  console.log("Uploading:", blob.size, "bytes as recording." + extension);
+  console.log("To:", uploadUrl);
   
-  const token = localStorage.getItem('meetmind_token');
-  if (token) {
-    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-  }
+  // Show progress UI
+  showUploadProgress();
   
-  // CSRF token
-  const csrfToken = getCookie('csrf_token');
-  if (csrfToken) {
-    xhr.setRequestHeader('X-CSRF-Token', csrfToken);
-  }
-  
-  xhr.upload.onprogress = (event) => {
-    if (event.lengthComputable) {
-      const percent = Math.round((event.loaded / event.total) * 100);
-      progressBar.style.width = percent + '%';
-      progressPercent.textContent = percent + '%';
-      if (percent >= 100) {
-        uploadBtn.textContent = 'AI Processing (may take 1-2 mins)...';
+  try {
+    const response = await fetch(
+      uploadUrl,
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`
+          // DO NOT set Content-Type here — browser sets it automatically
+          // with correct boundary for multipart/form-data
+        },
+        body: formData
       }
-    }
-  };
-  
-  xhr.onload = () => {
-    if (xhr.status >= 200 && xhr.status < 300) {
-      try {
-        const resData = JSON.parse(xhr.responseText);
-        showToast("Recording uploaded successfully!");
-        
-        // Setup browser completion notification
-        if (Notification.permission === "granted") {
-          new Notification("Meeting Uploaded", {
-            body: `"${title}" has been uploaded and is being processed by AI.`
-          });
-        }
-        
-        // Redirect to dashboard
-        setTimeout(() => {
-          window.location.href = 'dashboard.html';
-        }, 1500);
-      } catch (err) {
-        showToast("Error processing server response.");
-        resetUploadUI();
+    );
+    
+    console.log("Upload response status:", response.status);
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error("Upload error:", errorData);
+      
+      if (response.status === 401) {
+        showToast("Session expired. Please login again.");
+        window.location.href = "/login.html";
+        return;
       }
-    } else {
-      let errMsg = "Upload failed. Please try again.";
-      try {
-        const resData = JSON.parse(xhr.responseText);
-        errMsg = resData.detail || errMsg;
-      } catch(e) {}
-      showToast(errMsg);
-      resetUploadUI();
+      
+      throw new Error(errorData.detail || "Upload failed");
     }
-  };
-  
-  xhr.onerror = () => {
-    showToast("Network error during upload.");
-    resetUploadUI();
-  };
-  
-  xhr.send(formData);
-});
+    
+    const data = await response.json();
+    console.log("Upload success:", data);
+    
+    // Redirect to meeting page
+    window.location.href = `/meeting.html?id=${data.meeting_id || data.id}`;
+    
+  } catch (error) {
+    console.error("Upload failed:", error);
+    showToast("Upload failed: " + error.message);
+    hideUploadProgress();
+  }
+}
 
-function resetUploadUI() {
-  const uploadBtn = document.getElementById('upload-btn');
-  uploadBtn.disabled = false;
-  uploadBtn.textContent = 'Process with AI';
-  document.getElementById('upload-progress-container').style.display = 'none';
+// Upload & Process recording
+const uploadBtn = document.getElementById('upload-btn');
+if (uploadBtn) {
+  uploadBtn.addEventListener('click', uploadRecording);
 }
 
 // Request permission for browser notifications on load
@@ -472,3 +520,7 @@ if ("Notification" in window && Notification.permission === "default") {
 
 // Load Microphones list on startup
 loadMicrophones();
+
+// Debug logs on load
+console.log("Recorder page loaded");
+console.log("Auth token:", localStorage.getItem("meetmind_token") ? "found" : "missing");

@@ -71,6 +71,8 @@ async def get_shared_meeting(slug: str):
             created_at=row["created_at"],
             status=row["status"]
         )
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.exception("Failed to query shared meeting")
         raise HTTPException(status_code=500, detail=f"Database query failed: {exc}")

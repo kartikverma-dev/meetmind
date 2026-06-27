@@ -51,12 +51,7 @@ async def ask_question_on_meeting(
             detail="Question is too long. Maximum allowed is 500 characters."
         )
 
-    # Detect injection attempts
-    if detect_injection_attempt(q):
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Request rejected due to potential security injection risk."
-        )
+
 
     # Sanitize query parameter input
     q = sanitize_text(q, max_length=500)
