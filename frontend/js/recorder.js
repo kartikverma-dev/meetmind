@@ -13,29 +13,87 @@ let timerInterval = null;
 let recordedBlob = null;
 let selectedSource = 'screen'; // default
 
-// Web Speech API
-let recognition = null;
-if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  recognition = new SpeechRecognition();
+// Web Speech API and Live Transcription
+window.speechRecognition = null;
+window.isRecording = false;
+
+function startLiveTranscription() {
+  // Check browser support
+  const SpeechRecognition = window.SpeechRecognition 
+    || window.webkitSpeechRecognition;
+  
+  if (!SpeechRecognition) {
+    // Hide live transcription panel silently
+    const panel = document.getElementById('live-transcript-panel');
+    if (panel) panel.style.display = 'none';
+    console.log("Speech recognition not supported in this browser");
+    return;
+  }
+  
+  const recognition = new SpeechRecognition();
   recognition.continuous = true;
   recognition.interimResults = true;
+  recognition.lang = document.getElementById('language-select')?.value 
+    || 'en-US';
+  
+  let finalTranscript = '';
   
   recognition.onresult = (event) => {
     let interimTranscript = '';
-    let finalTranscript = '';
-    for (let i = event.resultIndex; i < event.results.length; ++i) {
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const transcript = event.results[i][0].transcript;
       if (event.results[i].isFinal) {
-        finalTranscript += event.results[i][0].transcript;
+        finalTranscript += transcript + ' ';
       } else {
-        interimTranscript += event.results[i][0].transcript;
+        interimTranscript += transcript;
       }
     }
-    const box = document.getElementById('live-transcription-box');
-    if (box) {
-      box.textContent = finalTranscript || interimTranscript || "Listening...";
+    
+    const display = document.getElementById('live-transcript-text');
+    if (display) {
+      display.innerHTML = finalTranscript + 
+        '<span style="opacity:0.5">' + interimTranscript + '</span>';
+      display.scrollTop = display.scrollHeight;
     }
   };
+  
+  recognition.onerror = (event) => {
+    console.log("Speech recognition error:", event.error);
+    // Don't crash — just stop silently
+    if (event.error === 'not-allowed') {
+      const panel = document.getElementById('live-transcript-panel');
+      if (panel) {
+        panel.innerHTML = '<p style="color:var(--text-secondary); font-size:13px;">Live preview unavailable — mic permission needed. Your full transcript will be generated after processing.</p>';
+      }
+    }
+  };
+  
+  recognition.onend = () => {
+    // Restart if still recording
+    if (window.isRecording) {
+      try {
+        recognition.start();
+      } catch (err) {
+        console.log("Could not restart speech recognition:", err);
+      }
+    }
+  };
+  
+  try {
+    recognition.start();
+    window.speechRecognition = recognition;
+  } catch(e) {
+    console.log("Could not start recognition:", e);
+  }
+}
+
+function stopLiveTranscription() {
+  if (window.speechRecognition) {
+    try {
+      window.speechRecognition.stop();
+    } catch (e) {}
+    window.speechRecognition = null;
+  }
 }
 
 // Toast Helper
@@ -157,6 +215,8 @@ function stopTimer() {
 // Stop all media tracks
 function stopTracks() {
   stopTimer();
+  window.isRecording = false;
+  stopLiveTranscription();
   
   if (drawVisual) {
     cancelAnimationFrame(drawVisual);
@@ -175,10 +235,6 @@ function stopTracks() {
   if (audioCtx && audioCtx.state !== 'closed') {
     audioCtx.close();
     audioCtx = null;
-  }
-  
-  if (recognition) {
-    try { recognition.stop(); } catch(e) {}
   }
 }
 
@@ -267,38 +323,61 @@ document.getElementById('start-session-btn').addEventListener('click', async () 
       }
     };
     
-    mediaRecorder.onstop = () => {
-      // Assemble all chunks into one blob
-      const blob = new Blob(recordedChunks, { type: mimeType });
+    mediaRecorder.onstop = async () => {
+      const blob = new Blob(recordedChunks, { 
+        type: mimeType 
+      });
+      window.recordedBlob = blob;
+      recordedBlob = blob;
       
-      // Create object URL from blob
       const audioURL = URL.createObjectURL(blob);
-      
-      // Set on audio player
       const audioPlayer = document.getElementById('audio-player');
+      
+      // Fix for webm duration bug
       if (audioPlayer) {
         audioPlayer.src = audioURL;
-        audioPlayer.load();  // ← force reload the element
+        audioPlayer.preload = "metadata";
+        
+        // Seek to end to force duration calculation
+        audioPlayer.addEventListener('loadedmetadata', () => {
+          if (audioPlayer.duration === Infinity || isNaN(audioPlayer.duration)) {
+            audioPlayer.currentTime = 1e101; // seek to very end
+            audioPlayer.addEventListener('timeupdate', () => {
+              audioPlayer.currentTime = 0;
+              // Now duration should be correct
+            }, { once: true });
+          }
+        }, { once: true });
+        
+        audioPlayer.load();
       }
       
-      // Store blob for upload later
-      window.recordedBlob = blob;
+      // Show review section
+      const dateStr = new Date().toISOString().split('T')[0];
+      const titleEl = document.getElementById('meeting-title');
+      if (titleEl) {
+        titleEl.value = `Meeting - ${dateStr}`;
+      }
       
-      console.log("Recording size:", blob.size, "bytes");
-      console.log("Recording type:", blob.type);
-      console.log("Chunks collected:", recordedChunks.length);
+      const recPane = document.getElementById('recording-pane');
+      if (recPane) recPane.style.display = 'none';
+      const revPane = document.getElementById('review-pane');
+      if (revPane) revPane.style.display = 'block';
+      
+      // Log for debugging
+      console.log("Blob size:", blob.size, "bytes");
+      console.log("Blob type:", blob.type);
+      console.log("Chunks:", recordedChunks.length);
       console.log("Total size:", recordedChunks.reduce((a,b) => a + b.size, 0));
       
       stopTracks();
-      prepareReview();
     };
     
     mediaRecorder.start(1000);
     startTimer();
     
-    if (recognition) {
-      try { recognition.start(); } catch(e) {}
-    }
+    window.isRecording = true;
+    startLiveTranscription();
     
     document.getElementById('setup-pane').style.display = 'none';
     document.getElementById('recording-pane').style.display = 'block';
@@ -321,9 +400,8 @@ pauseBtn.addEventListener('click', () => {
     stopTimer();
     pauseBtn.textContent = 'Resume';
     document.getElementById('status-text').textContent = 'Paused';
-    if (recognition) {
-      try { recognition.stop(); } catch(e) {}
-    }
+    window.isRecording = false;
+    stopLiveTranscription();
   } else if (mediaRecorder.state === 'paused') {
     mediaRecorder.resume();
     // Resume timer count
@@ -337,9 +415,8 @@ pauseBtn.addEventListener('click', () => {
     
     pauseBtn.textContent = 'Pause';
     document.getElementById('status-text').textContent = 'Capturing...';
-    if (recognition) {
-      try { recognition.start(); } catch(e) {}
-    }
+    window.isRecording = true;
+    startLiveTranscription();
   }
 });
 
@@ -422,6 +499,17 @@ function hideUploadProgress() {
   }
 }
 
+function debugAuth() {
+  console.group("=== AUTH DEBUG ===");
+  console.log("localStorage keys:", Object.keys(localStorage));
+  Object.keys(localStorage).forEach(key => {
+    const val = localStorage.getItem(key);
+    console.log(key + ":", val ? val.substring(0,30) + "..." : "null");
+  });
+  console.log("Cookies:", document.cookie);
+  console.groupEnd();
+}
+
 async function uploadRecording() {
   const blob = window.recordedBlob;
   
@@ -430,10 +518,13 @@ async function uploadRecording() {
     return;
   }
   
+  // Call before every upload attempt
+  debugAuth();
+  
   // Get auth token
   const token = localStorage.getItem("meetmind_token");
   
-  console.log("Token found:", token ? "YES" : "NO");
+  console.log("Token value:", token ? token.substring(0,20) + "..." : "NULL");
   
   if (!token) {
     showToast("Session expired. Please login again.");
